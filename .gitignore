@@ -1,0 +1,13 @@
+node_modules/
+.next/
+__pycache__/
+*.pyc
+.env
+*.egg-info/
+dist/
+build/
+uploads/*
+!uploads/.gitkeep
+.pytest_cache/
+*.egg
+.DS_Store
