@@ -30,6 +30,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+        <script src="/runtime-config.js" />
       </head>
       <body>{children}</body>
     </html>

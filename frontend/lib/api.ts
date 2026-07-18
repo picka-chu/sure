@@ -1,6 +1,13 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from "axios";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+function getApiBase(): string {
+  if (typeof window !== "undefined" && (window as any).__API_URL__) {
+    return (window as any).__API_URL__;
+  }
+  return "http://localhost:8000";
+}
+
+const API_BASE = getApiBase();
 
 const api: AxiosInstance = axios.create({
   baseURL: API_BASE,
