@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import Badge from "@/components/ui/Badge";
+import { Badge } from "@/components/ui/Badge";
 import { subscriptionApi } from "@/lib/api";
 
 export default function PayPage({ params }: { params: Promise<{ plan: string }> }) {

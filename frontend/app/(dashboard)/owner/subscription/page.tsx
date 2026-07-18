@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
-import Badge from "@/components/ui/Badge";
+import { Badge } from "@/components/ui/Badge";
 import { subscriptionApi } from "@/lib/api";
 
 const PLANS = [
@@ -91,7 +91,7 @@ export default function SubscriptionPage() {
               <CardTitle>Current Status</CardTitle>
               <Badge
                 variant={
-                  isActive ? "success" : isTrial ? "warning" : "error"
+                  isActive ? "success" : isTrial ? "warning" : "danger"
                 }
               >
                 {isActive && "Active"}
@@ -243,7 +243,7 @@ function PaymentHistory() {
             <p className="text-sm font-medium text-surface-900 capitalize">{p.plan_type} — ETB {p.amount.toLocaleString()}</p>
             <p className="text-xs text-surface-400">{new Date(p.created_at).toLocaleDateString()}</p>
           </div>
-          <Badge variant={p.status === "verified" ? "success" : p.status === "pending" ? "warning" : "error"}>
+          <Badge variant={p.status === "verified" ? "success" : p.status === "pending" ? "warning" : "danger"}>
             {p.status}
           </Badge>
         </div>
