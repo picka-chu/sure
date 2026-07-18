@@ -16,6 +16,9 @@ from app.services.verification_service import verify_receipt, detect_bank_from_u
 from typing import List, Optional
 from app.config import settings
 
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "bmp", "webp"}
+ALLOWED_MIME_PREFIXES = {"image/"}
+
 router = APIRouter(prefix="/api/verifications", tags=["Verifications"])
 
 
@@ -102,9 +105,12 @@ async def verify_by_capture(
     staff_id = None if not is_staff else current_user.id
     business_id = current_user.business_id
 
+    ext = os.path.splitext(file.filename or "capture.png")[1].lower().lstrip(".") or "png"
+    if ext not in ALLOWED_EXTENSIONS or not file.content_type or not file.content_type.startswith(tuple(ALLOWED_MIME_PREFIXES)):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid file type. Only images are allowed.")
+
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-    file_ext = os.path.splitext(file.filename or "capture.png")[1] or ".png"
-    file_name = f"{uuid.uuid4()}{file_ext}"
+    file_name = f"{uuid.uuid4()}.{ext}"
     file_path = os.path.join(settings.UPLOAD_DIR, file_name)
 
     content = await file.read()

@@ -7,40 +7,51 @@ function getApiBase(): string {
   return "http://localhost:8000";
 }
 
-const API_BASE = getApiBase();
+let apiInstance: AxiosInstance | null = null;
 
-const api: AxiosInstance = axios.create({
-  baseURL: API_BASE,
-  headers: { "Content-Type": "application/json" },
-});
+function getApi(): AxiosInstance {
+  if (!apiInstance) {
+    apiInstance = axios.create({
+      headers: { "Content-Type": "application/json" },
+    });
 
-api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-  if (typeof window !== "undefined") {
-    const token =
-      localStorage.getItem("owner_token") ||
-      localStorage.getItem("staff_token");
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-  }
-  return config;
-});
-
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
+    apiInstance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+      config.baseURL = getApiBase();
       if (typeof window !== "undefined") {
-        localStorage.removeItem("owner_token");
-        localStorage.removeItem("staff_token");
-        localStorage.removeItem("owner_user");
-        localStorage.removeItem("staff_user");
-        window.location.href = "/login";
+        const token =
+          localStorage.getItem("owner_token") ||
+          localStorage.getItem("staff_token");
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
       }
-    }
-    return Promise.reject(error);
+      return config;
+    });
+
+    apiInstance.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (!error.response) {
+          console.error("Network error — check your connection");
+          return Promise.reject(new Error("Network error. Please check your connection."));
+        }
+        if (error.response?.status === 401) {
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("owner_token");
+            localStorage.removeItem("staff_token");
+            localStorage.removeItem("owner_user");
+            localStorage.removeItem("staff_user");
+            window.location.href = "/login";
+          }
+        }
+        return Promise.reject(error);
+      }
+    );
   }
-);
+  return apiInstance;
+}
+
+const api = getApi();
 
 export default api;
 

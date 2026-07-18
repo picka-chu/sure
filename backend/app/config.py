@@ -34,6 +34,33 @@ class Settings:
     STRIPE_API_KEY: Optional[str] = os.getenv("STRIPE_API_KEY")
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
     UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "./uploads")
+    PRICING_MONTHLY_AMOUNT: float = float(os.getenv("PRICING_MONTHLY_AMOUNT", "750"))
+    PRICING_YEARLY_AMOUNT: float = float(os.getenv("PRICING_YEARLY_AMOUNT", "7500"))
+    PAYMENT_CBE_BANK: str = os.getenv("PAYMENT_CBE_BANK", "Commercial Bank of Ethiopia (CBE)")
+    PAYMENT_CBE_HOLDER: str = os.getenv("PAYMENT_CBE_HOLDER", "Bereket Tesfalem")
+    PAYMENT_CBE_ACCOUNT: str = os.getenv("PAYMENT_CBE_ACCOUNT", "1000602869893")
+    PAYMENT_TELEBIRR_BANK: str = os.getenv("PAYMENT_TELEBIRR_BANK", "Telebirr (Ethio telecom)")
+    PAYMENT_TELEBIRR_HOLDER: str = os.getenv("PAYMENT_TELEBIRR_HOLDER", "Bereket Tesfalem")
+    PAYMENT_TELEBIRR_ACCOUNT: str = os.getenv("PAYMENT_TELEBIRR_ACCOUNT", "0930529985")
 
 
 settings = Settings()
+
+
+PRICING = {
+    "monthly": {"amount": settings.PRICING_MONTHLY_AMOUNT, "currency": "ETB", "label": "Monthly"},
+    "yearly": {"amount": settings.PRICING_YEARLY_AMOUNT, "currency": "ETB", "label": "Yearly", "discount_note": "2 months free"},
+}
+
+PAYMENT_ACCOUNTS = {
+    "cbe": {
+        "bank_name": settings.PAYMENT_CBE_BANK,
+        "account_holder": settings.PAYMENT_CBE_HOLDER,
+        "account_number": settings.PAYMENT_CBE_ACCOUNT,
+    },
+    "telebirr": {
+        "bank_name": settings.PAYMENT_TELEBIRR_BANK,
+        "account_holder": settings.PAYMENT_TELEBIRR_HOLDER,
+        "account_number": settings.PAYMENT_TELEBIRR_ACCOUNT,
+    },
+}

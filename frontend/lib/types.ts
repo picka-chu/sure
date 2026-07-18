@@ -63,7 +63,7 @@ export interface Verification {
   currency: string;
   status: string;
   receipt_url?: string;
-  verification_data?: any;
+  verification_data?: Record<string, unknown>;
   confidence_score?: number;
   error_message?: string;
   verified_at?: string;
@@ -82,9 +82,15 @@ export interface DashboardData {
   scam_today: number;
   scam_rate: number;
   total_scans_today: number;
-  recent_verifications: any[];
-  daily_stats: any[];
+  recent_verifications: Verification[];
+  daily_stats: DailyStat[];
   bank_breakdown: Record<string, number>;
+}
+
+export interface DailyStat {
+  date: string;
+  total: number;
+  scam: number;
 }
 
 export interface StaffTodayStats {
@@ -96,4 +102,44 @@ export interface StaffTodayStats {
 export interface SupportedBank {
   id: string;
   name: string;
+}
+
+export interface SubscriptionStatus {
+  status: string;
+  plan: string;
+  trial_end_date: string | null;
+  subscription_start_date: string | null;
+  subscription_end_date: string | null;
+  days_remaining: number;
+  is_active: boolean;
+}
+
+export interface PricingPlan {
+  amount: number;
+  currency: string;
+  label: string;
+  discount_note?: string;
+}
+
+export interface PaymentAccount {
+  bank_name: string;
+  account_holder: string;
+  account_number: string;
+}
+
+export interface PaymentRecord {
+  id: string;
+  business_id: string;
+  plan_type: string;
+  amount: number;
+  currency: string;
+  payment_method: string;
+  status: string;
+  sender_name?: string;
+  sender_account?: string;
+  transaction_reference?: string;
+  screenshot_path?: string;
+  admin_notes?: string;
+  verified_at?: string;
+  created_at: string;
 }

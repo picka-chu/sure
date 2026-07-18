@@ -2,25 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, Any
 from uuid import UUID
 from datetime import datetime
-
-
-PRICING = {
-    "monthly": {"amount": 750.0, "currency": "ETB", "label": "Monthly"},
-    "yearly": {"amount": 7500.0, "currency": "ETB", "label": "Yearly", "discount_note": "2 months free"},
-}
-
-PAYMENT_ACCOUNTS = {
-    "cbe": {
-        "bank_name": "Commercial Bank of Ethiopia (CBE)",
-        "account_holder": "Bereket Tesfalem",
-        "account_number": "1000602869893",
-    },
-    "telebirr": {
-        "bank_name": "Telebirr (Ethio telecom)",
-        "account_holder": "Bereket Tesfalem",
-        "account_number": "0930529985",
-    },
-}
+from app.config import PRICING, PAYMENT_ACCOUNTS
 
 
 class PricingInfo(BaseModel):

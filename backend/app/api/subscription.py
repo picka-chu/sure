@@ -2,6 +2,7 @@ import os
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from app.database import get_db
 from app.middleware.auth import get_current_user
 from app.models.user import User
@@ -26,6 +27,9 @@ from app.services.subscription_service import (
 )
 from app.config import settings
 from typing import List
+
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "bmp", "webp"}
+ALLOWED_MIME_PREFIXES = {"image/"}
 
 router = APIRouter(prefix="/api/subscription", tags=["Subscription"])
 
@@ -68,9 +72,12 @@ async def submit_payment_endpoint(
     if payment_method not in ("cbe", "telebirr"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid payment method")
 
+    ext = os.path.splitext(screenshot.filename or "payment.png")[1].lower().lstrip(".") or "png"
+    if ext not in ALLOWED_EXTENSIONS or not screenshot.content_type or not screenshot.content_type.startswith(tuple(ALLOWED_MIME_PREFIXES)):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid file type. Only images are allowed.")
+
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
-    file_ext = os.path.splitext(screenshot.filename or "payment.png")[1] or ".png"
-    file_name = f"payment_{uuid.uuid4()}{file_ext}"
+    file_name = f"payment_{uuid.uuid4()}.{ext}"
     file_path = os.path.join(settings.UPLOAD_DIR, file_name)
 
     content = await screenshot.read()
