@@ -1,28 +1,43 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import {
   TrendingUp,
   ShieldCheck,
   AlertTriangle,
   Scan,
-  ArrowUp,
-  ArrowDown,
   Building2,
   Users,
+  Clock,
+  CreditCard,
+  Sparkles,
+  ArrowRight,
 } from "lucide-react";
-import { analyticsApi } from "@/lib/api";
+import { analyticsApi, subscriptionApi } from "@/lib/api";
 import { DashboardData } from "@/lib/types";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { formatCurrency, formatDate, getBankName } from "@/lib/utils";
+import Button from "@/components/ui/Button";
+import SubscriptionWelcomeModal from "@/components/ui/SubscriptionWelcomeModal";
 
 export default function OwnerDashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
+  const [subscription, setSubscription] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showWelcome, setShowWelcome] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     loadDashboard();
+    loadSubscription();
+
+    const showWelcomeFlag = localStorage.getItem("show_welcome_trial");
+    if (showWelcomeFlag === "true") {
+      localStorage.removeItem("show_welcome_trial");
+      setShowWelcome(true);
+    }
   }, []);
 
   const loadDashboard = async () => {
@@ -33,6 +48,15 @@ export default function OwnerDashboard() {
       // handle error
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadSubscription = async () => {
+    try {
+      const res = await subscriptionApi.getStatus();
+      setSubscription(res.data);
+    } catch {
+      // ignore
     }
   };
 
@@ -79,19 +103,81 @@ export default function OwnerDashboard() {
     },
   ];
 
+  const isTrial = subscription?.status === "trial";
+  const isActive = subscription?.status === "active";
+  const isExpired = subscription?.status === "expired" || subscription?.status === "cancelled";
+
   return (
     <div className="space-y-6 animate-fade-in">
+      {showWelcome && subscription && (
+        <SubscriptionWelcomeModal
+          businessName={JSON.parse(localStorage.getItem("owner_user") || "{}").business_name || "Business"}
+          trialEndDate={subscription.trial_end_date}
+          daysRemaining={subscription.days_remaining}
+          onClose={() => setShowWelcome(false)}
+        />
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-surface-900">Dashboard</h1>
           <p className="text-surface-500 mt-1">Your business at a glance</p>
         </div>
-        {data.scam_rate > 0 && (
+        {subscription && !isActive && (
+          <Badge variant={isTrial ? "warning" : "danger"}>
+            {isTrial ? `${subscription.days_remaining}d trial` : "Expired"}
+          </Badge>
+        )}
+        {data.scam_rate > 0 && !subscription && (
           <Badge variant={data.scam_rate > 20 ? "danger" : "warning"}>
             {data.scam_rate}% scam rate
           </Badge>
         )}
       </div>
+
+      {subscription && (isTrial || isExpired) && (
+        <div
+          className={`p-5 rounded-2xl border cursor-pointer transition-all hover:shadow-lg ${
+            isTrial
+              ? "bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200"
+              : "bg-gradient-to-br from-red-50 to-rose-50 border-red-200"
+          }`}
+          onClick={() => router.push("/owner/subscription")}
+        >
+          <div className="flex items-start justify-between">
+            <div className="flex items-start gap-4">
+              <div className={`p-3 rounded-xl ${isTrial ? "bg-amber-100" : "bg-red-100"}`}>
+                {isTrial ? <Clock size={24} className="text-amber-600" /> : <AlertTriangle size={24} className="text-red-600" />}
+              </div>
+              <div>
+                <h3 className="font-semibold text-surface-900">
+                  {isTrial ? "Free Trial Active" : "Subscription Expired"}
+                </h3>
+                <p className={`text-sm mt-1 ${isTrial ? "text-amber-700" : "text-red-700"}`}>
+                  {isTrial
+                    ? `You have ${subscription.days_remaining} days remaining. Subscribe to keep your business protected.`
+                    : "Your subscription has ended. Renew now to continue using Sure."}
+                </p>
+                <div className="mt-3">
+                  <span
+                    className={`inline-flex items-center gap-1 text-sm font-medium ${
+                      isTrial ? "text-amber-700" : "text-red-700"
+                    } hover:underline`}
+                  >
+                    {isTrial ? "View Plans" : "Renew Now"} <ArrowRight size={14} />
+                  </span>
+                </div>
+              </div>
+            </div>
+            {isTrial && (
+              <div className="text-right shrink-0">
+                <p className="text-3xl font-bold text-amber-600">{subscription.days_remaining}</p>
+                <p className="text-xs text-amber-600">days left</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => (

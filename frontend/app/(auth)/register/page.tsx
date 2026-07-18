@@ -53,6 +53,7 @@ export default function RegisterPage() {
       });
       localStorage.setItem("owner_token", res.data.access_token);
       localStorage.setItem("owner_user", JSON.stringify(res.data.user));
+      localStorage.setItem("show_welcome_trial", "true");
       router.push("/owner");
     } catch (err: any) {
       setError(err.response?.data?.detail || "Registration failed");

@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { ShieldCheck, History, LogOut, User } from "lucide-react";
+import { ShieldCheck, History, LogOut, User, AlertTriangle } from "lucide-react";
+import api from "@/lib/api";
 
 export default function StaffLayout({ children }: { children: React.ReactNode }) {
   const [staff, setStaff] = useState<any>(null);
   const [ready, setReady] = useState(false);
+  const [subExpired, setSubExpired] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -20,6 +22,15 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
     setStaff(JSON.parse(stored));
     setReady(true);
   }, [router]);
+
+  useEffect(() => {
+    if (!ready) return;
+    api.get("/api/subscription/status").then((res) => {
+      if (res.data.status === "expired" || res.data.status === "cancelled") {
+        setSubExpired(true);
+      }
+    }).catch(() => {});
+  }, [ready]);
 
   const handleLogout = () => {
     localStorage.removeItem("staff_token");
@@ -57,6 +68,13 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
           </div>
         </div>
       </header>
+
+      {subExpired && (
+        <div className="bg-red-50 border-b border-red-100 px-4 py-2.5 text-sm text-red-700 flex items-center gap-2 justify-center">
+          <AlertTriangle size={14} />
+          <span>Business subscription expired. Contact your owner to renew.</span>
+        </div>
+      )}
 
       <main className="max-w-lg mx-auto px-4 py-4">{children}</main>
 
