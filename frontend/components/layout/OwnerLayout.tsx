@@ -12,20 +12,25 @@ import {
   Menu,
   X,
   ShieldCheck,
-  ChevronDown,
+  CreditCard,
+  Clock,
+  AlertTriangle,
 } from "lucide-react";
+import { subscriptionApi } from "@/lib/api";
 
 const navItems = [
   { href: "/owner", label: "Dashboard", icon: LayoutDashboard },
   { href: "/owner/banks", label: "Bank Accounts", icon: Building2 },
   { href: "/owner/staff", label: "Staff", icon: Users },
   { href: "/owner/history", label: "History", icon: History },
+  { href: "/owner/subscription", label: "Subscription", icon: CreditCard },
   { href: "/owner/settings", label: "Settings", icon: Settings },
 ];
 
 export default function OwnerLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [subBanner, setSubBanner] = useState<{ type: string; message: string } | null>(null);
   const router = useRouter();
   const pathname = usePathname();
 
@@ -38,6 +43,22 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
     }
     setUser(JSON.parse(stored));
   }, [router]);
+
+  useEffect(() => {
+    if (!user) return;
+    if (pathname.startsWith("/owner/subscription")) return;
+
+    subscriptionApi.getStatus().then((res) => {
+      const sub = res.data;
+      if (sub.status === "expired" || sub.status === "cancelled") {
+        setSubBanner({ type: "error", message: "Your subscription has expired. Renew now to regain access." });
+      } else if (sub.status === "trial" && sub.days_remaining <= 2) {
+        setSubBanner({ type: "warning", message: `Your free trial ends in ${sub.days_remaining} days. Subscribe to keep using Sure.` });
+      } else if (sub.status === "trial" && sub.days_remaining <= 0) {
+        setSubBanner({ type: "error", message: "Your trial has ended. Subscribe to continue using Sure." });
+      }
+    }).catch(() => {});
+  }, [user, pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem("owner_token");
@@ -131,6 +152,20 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
           )}
         </div>
       </aside>
+
+      {subBanner && (
+        <div className={`lg:ml-64 px-4 py-3 text-sm font-medium flex items-center gap-2 ${
+          subBanner.type === "error"
+            ? "bg-red-50 text-red-700 border-b border-red-100"
+            : "bg-amber-50 text-amber-700 border-b border-amber-100"
+        }`}>
+          {subBanner.type === "error" ? <AlertTriangle size={16} /> : <Clock size={16} />}
+          <span className="flex-1">{subBanner.message}</span>
+          <a href="/owner/subscription" className="underline font-semibold shrink-0">
+            {subBanner.type === "error" ? "Renew Now" : "View Plans"}
+          </a>
+        </div>
+      )}
 
       <main className="lg:ml-64 pt-16 lg:pt-0 min-h-screen">
         <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">{children}</div>

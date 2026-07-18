@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.api import auth, businesses, banks, staff, verifications, analytics
+from app.api import auth, businesses, banks, staff, verifications, analytics, subscription
 
 app = FastAPI(
     title="Sure - Bank Transfer Verifier",
@@ -23,6 +23,7 @@ app.include_router(banks.router)
 app.include_router(staff.router)
 app.include_router(verifications.router)
 app.include_router(analytics.router)
+app.include_router(subscription.router)
 
 
 @app.get("/api/health")

@@ -12,7 +12,10 @@ class BusinessResponse(BaseModel):
     address: Optional[str] = None
     logo_url: Optional[str] = None
     subscription_status: str
+    subscription_plan: str
     trial_end_date: Optional[datetime] = None
+    subscription_start_date: Optional[datetime] = None
+    subscription_end_date: Optional[datetime] = None
     is_active: bool
     created_at: datetime
 

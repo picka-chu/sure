@@ -4,7 +4,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from datetime import datetime, timezone, timedelta
 from app.database import async_session_factory, engine, Base
-from app.models.business import Business, SubscriptionStatus
+from app.models.business import Business, SubscriptionStatus, PlanType
 from app.models.user import User
 from app.models.staff import StaffUser
 from app.models.bank import BankAccount, BankName
@@ -22,6 +22,47 @@ DEMO_DASHEN_ACCOUNT_ID = UUID("00000000-0000-0000-0000-000000000005")
 async def seed(force: bool = False):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(_migrate_business_columns)
+        await conn.run_sync(_create_payments_table)
+
+
+def _migrate_business_columns(conn):
+    from sqlalchemy import text
+    import sqlalchemy as sa
+    inspector = sa.inspect(conn)
+    columns = [c["name"] for c in inspector.get_columns("businesses")]
+    if "subscription_plan" not in columns:
+        conn.execute(text("ALTER TABLE businesses ADD COLUMN subscription_plan VARCHAR(50) DEFAULT 'none'"))
+    if "subscription_start_date" not in columns:
+        conn.execute(text("ALTER TABLE businesses ADD COLUMN subscription_start_date TIMESTAMPTZ"))
+    if "subscription_end_date" not in columns:
+        conn.execute(text("ALTER TABLE businesses ADD COLUMN subscription_end_date TIMESTAMPTZ"))
+
+
+def _create_payments_table(conn):
+    from sqlalchemy import text
+    import sqlalchemy as sa
+    if not sa.inspect(conn).has_table("payments"):
+        conn.execute(text("""
+            CREATE TABLE payments (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                business_id UUID NOT NULL REFERENCES businesses(id),
+                plan_type VARCHAR(50) NOT NULL,
+                amount FLOAT NOT NULL,
+                currency VARCHAR(10) DEFAULT 'ETB',
+                payment_method VARCHAR(50) NOT NULL,
+                status VARCHAR(50) DEFAULT 'pending',
+                screenshot_path VARCHAR(500),
+                sender_name VARCHAR(255),
+                sender_account VARCHAR(100),
+                transaction_reference VARCHAR(255),
+                admin_notes TEXT,
+                verified_by UUID,
+                verified_at TIMESTAMPTZ,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                updated_at TIMESTAMPTZ DEFAULT NOW()
+            )
+        """))
 
     async with async_session_factory() as db:
         from sqlalchemy import select, delete
@@ -50,7 +91,10 @@ async def seed(force: bool = False):
             phone="+251 91 123 4567",
             address="Bole Road, Addis Ababa, Ethiopia",
             subscription_status=SubscriptionStatus.TRIAL,
+            subscription_plan=PlanType.NONE,
             trial_end_date=datetime.now(timezone.utc) + timedelta(days=7),
+            subscription_start_date=None,
+            subscription_end_date=None,
             is_active=True,
         )
         db.add(business)

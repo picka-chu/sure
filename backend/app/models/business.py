@@ -7,6 +7,12 @@ from app.database import Base
 import enum
 
 
+class PlanType(str, enum.Enum):
+    MONTHLY = "monthly"
+    YEARLY = "yearly"
+    NONE = "none"
+
+
 class SubscriptionStatus(str, enum.Enum):
     TRIAL = "trial"
     ACTIVE = "active"
@@ -26,7 +32,12 @@ class Business(Base):
     subscription_status: Mapped[SubscriptionStatus] = mapped_column(
         SAEnum(SubscriptionStatus), default=SubscriptionStatus.TRIAL
     )
+    subscription_plan: Mapped[PlanType] = mapped_column(
+        SAEnum(PlanType), default=PlanType.NONE
+    )
     trial_end_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    subscription_start_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
+    subscription_end_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     stripe_customer_id: Mapped[str] = mapped_column(String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(

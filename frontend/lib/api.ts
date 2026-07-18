@@ -101,3 +101,17 @@ export const verificationApi = {
 export const analyticsApi = {
   dashboard: () => api.get("/api/analytics/dashboard"),
 };
+
+export const subscriptionApi = {
+  getStatus: () => api.get("/api/subscription/status"),
+  getPricing: () => api.get("/api/subscription/pricing"),
+  getPaymentAccounts: () => api.get("/api/subscription/payment-accounts"),
+  submitPayment: (formData: FormData) =>
+    api.post("/api/subscription/submit-payment", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    }),
+  getPaymentHistory: () => api.get("/api/subscription/payments"),
+  getPendingPayments: () => api.get("/api/subscription/admin/pending-payments"),
+  verifyPayment: (paymentId: string, data: { status: string; admin_notes?: string }) =>
+    api.post(`/api/subscription/admin/verify-payment/${paymentId}`, data),
+};
