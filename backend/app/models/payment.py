@@ -30,11 +30,11 @@ class Payment(Base):
     business_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("businesses.id"), nullable=False, index=True
     )
-    plan_type: Mapped[PlanType] = mapped_column(SAEnum(PlanType), nullable=False)
+    plan_type: Mapped[PlanType] = mapped_column(SAEnum(PlanType, native_enum=False), nullable=False)
     amount: Mapped[float] = mapped_column(Float, nullable=False)
     currency: Mapped[str] = mapped_column(String(10), default="ETB")
-    payment_method: Mapped[PaymentMethod] = mapped_column(SAEnum(PaymentMethod), nullable=False)
-    status: Mapped[PaymentStatus] = mapped_column(SAEnum(PaymentStatus), default=PaymentStatus.PENDING)
+    payment_method: Mapped[PaymentMethod] = mapped_column(SAEnum(PaymentMethod, native_enum=False), nullable=False)
+    status: Mapped[PaymentStatus] = mapped_column(SAEnum(PaymentStatus, native_enum=False), default=PaymentStatus.PENDING)
     screenshot_path: Mapped[str] = mapped_column(String(500), nullable=True)
     sender_name: Mapped[str] = mapped_column(String(255), nullable=True)
     sender_account: Mapped[str] = mapped_column(String(100), nullable=True)

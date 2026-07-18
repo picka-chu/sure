@@ -33,7 +33,7 @@ class Business(Base):
         SAEnum(SubscriptionStatus), default=SubscriptionStatus.TRIAL
     )
     subscription_plan: Mapped[PlanType] = mapped_column(
-        SAEnum(PlanType), default=PlanType.NONE
+        SAEnum(PlanType, native_enum=False), default=PlanType.NONE
     )
     trial_end_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
     subscription_start_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=True)
