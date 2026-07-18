@@ -112,7 +112,7 @@ async def _verify_receipt_direct(bank: str, reference: str, account_number: Opti
     url = verify_url + reference
 
     try:
-        async with httpx.AsyncClient(timeout=30.0, verify=False) as client:
+        async with httpx.AsyncClient(timeout=30.0, verify=True) as client:
             if bank == "cbe":
                 params = {"id": reference}
                 if account_number:

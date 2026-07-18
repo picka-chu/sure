@@ -85,11 +85,11 @@ async def update_bank_account(
     if not account:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bank account not found")
 
+    ALLOWED_FIELDS = {"account_holder_name", "account_number", "initial_balance"}
     update_data = req.model_dump(exclude_unset=True)
     for key, value in update_data.items():
-        if key == "is_active" and not value:
-            pass
-        setattr(account, key, value)
+        if key in ALLOWED_FIELDS:
+            setattr(account, key, value)
     await db.flush()
     await db.refresh(account)
     return account

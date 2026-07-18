@@ -51,13 +51,11 @@ async def get_subscription_status(db: AsyncSession, business_id: UUID) -> dict:
         raise ValueError("Business not found")
 
     now = datetime.now(timezone.utc)
+    is_expired = False
 
     if business.subscription_status == SubscriptionStatus.TRIAL:
         if business.trial_end_date and now > business.trial_end_date:
-            business.subscription_status = SubscriptionStatus.EXPIRED
-            business.subscription_plan = PlanType.NONE
-            await db.flush()
-            await db.refresh(business)
+            is_expired = True
             days_remaining = 0
         else:
             days_remaining = (business.trial_end_date - now).days if business.trial_end_date else 0
@@ -65,10 +63,7 @@ async def get_subscription_status(db: AsyncSession, business_id: UUID) -> dict:
                 days_remaining = 0
     elif business.subscription_status == SubscriptionStatus.ACTIVE:
         if business.subscription_end_date and now > business.subscription_end_date:
-            business.subscription_status = SubscriptionStatus.EXPIRED
-            business.subscription_plan = PlanType.NONE
-            await db.flush()
-            await db.refresh(business)
+            is_expired = True
             days_remaining = 0
         else:
             days_remaining = (business.subscription_end_date - now).days if business.subscription_end_date else 0
@@ -77,15 +72,34 @@ async def get_subscription_status(db: AsyncSession, business_id: UUID) -> dict:
     else:
         days_remaining = 0
 
+    status = SubscriptionStatus.EXPIRED if is_expired else business.subscription_status
+    plan = PlanType.NONE if is_expired else business.subscription_plan
+
     return {
-        "status": business.subscription_status.value,
-        "plan": business.subscription_plan.value if business.subscription_plan else "none",
+        "status": status.value,
+        "plan": plan.value if plan else "none",
         "trial_end_date": business.trial_end_date,
         "subscription_start_date": business.subscription_start_date,
         "subscription_end_date": business.subscription_end_date,
         "days_remaining": days_remaining,
-        "is_active": business.subscription_status in (SubscriptionStatus.TRIAL, SubscriptionStatus.ACTIVE),
+        "is_active": status in (SubscriptionStatus.TRIAL, SubscriptionStatus.ACTIVE),
     }
+
+
+async def sync_subscription_expiry(db: AsyncSession, business_id: UUID) -> None:
+    result = await db.execute(select(Business).where(Business.id == business_id))
+    business = result.scalar_one_or_none()
+    if not business:
+        return
+    now = datetime.now(timezone.utc)
+    if business.subscription_status == SubscriptionStatus.TRIAL:
+        if business.trial_end_date and now > business.trial_end_date:
+            business.subscription_status = SubscriptionStatus.EXPIRED
+            business.subscription_plan = PlanType.NONE
+    elif business.subscription_status == SubscriptionStatus.ACTIVE:
+        if business.subscription_end_date and now > business.subscription_end_date:
+            business.subscription_status = SubscriptionStatus.EXPIRED
+            business.subscription_plan = PlanType.NONE
 
 
 async def submit_payment(

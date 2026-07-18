@@ -7,6 +7,7 @@ from app.config import settings
 from app.models.user import User
 from app.models.business import Business, SubscriptionStatus
 from app.models.staff import StaffUser
+from app.services.subscription_service import sync_subscription_expiry
 
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
@@ -74,6 +75,8 @@ async def login_owner(db: AsyncSession, email: str, password: str) -> dict:
     if not business or not business.is_active:
         raise ValueError("Business account is inactive")
 
+    await sync_subscription_expiry(db, user.business_id)
+
     token = create_access_token({"sub": str(user.id), "role": "owner"})
     return {
         "access_token": token,
@@ -119,6 +122,8 @@ async def login_staff_by_email(db: AsyncSession, email: str, pin: str) -> dict:
     business = result.scalar_one_or_none()
     if not business or not business.is_active:
         raise ValueError("Business account is inactive")
+
+    await sync_subscription_expiry(db, staff.business_id)
 
     staff.last_login_at = datetime.now(timezone.utc)
     await db.flush()

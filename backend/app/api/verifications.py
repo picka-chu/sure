@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, s
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database import get_db
-from app.middleware.auth import get_current_user, get_current_staff
+from app.middleware.auth import get_current_user, get_current_staff, get_current_any
 from app.models.user import User
 from app.models.staff import StaffUser
 from app.models.business import Business
@@ -94,24 +94,13 @@ async def verify_by_link(
 @router.post("/capture", response_model=VerifyCaptureResponse)
 async def verify_by_capture(
     file: UploadFile = File(...),
-    current_user_or_staff = Depends(get_current_user),
+    current_user = Depends(get_current_any),
     db: AsyncSession = Depends(get_db),
 ):
-    is_staff = False
-    staff_id = None
-    business_id = None
-
-    try:
-        current_user = await get_current_user()
-        business_id = current_user.business_id
-    except Exception:
-        try:
-            current_staff = await get_current_staff()
-            is_staff = True
-            staff_id = current_staff.id
-            business_id = current_staff.business_id
-        except Exception:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required")
+    from app.models.user import User
+    is_staff = not isinstance(current_user, User)
+    staff_id = None if not is_staff else current_user.id
+    business_id = current_user.business_id
 
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
     file_ext = os.path.splitext(file.filename or "capture.png")[1] or ".png"

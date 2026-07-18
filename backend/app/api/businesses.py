@@ -33,9 +33,11 @@ async def update_my_business(
     if not business:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Business not found")
 
+    ALLOWED_FIELDS = {"name", "phone", "address", "logo_url"}
     update_data = req.model_dump(exclude_unset=True)
     for key, value in update_data.items():
-        setattr(business, key, value)
+        if key in ALLOWED_FIELDS:
+            setattr(business, key, value)
     await db.flush()
     await db.refresh(business)
     return business

@@ -80,9 +80,11 @@ async def update_staff(
     if not staff:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Staff not found")
 
+    ALLOWED_FIELDS = {"full_name", "email", "is_active"}
     update_data = req.model_dump(exclude_unset=True)
     for key, value in update_data.items():
-        setattr(staff, key, value)
+        if key in ALLOWED_FIELDS:
+            setattr(staff, key, value)
     await db.flush()
     await db.refresh(staff)
     return staff
