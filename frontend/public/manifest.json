@@ -1,6 +1,6 @@
 {
-  "name": "VerifyPay",
-  "short_name": "VerifyPay",
+  "name": "Sure",
+  "short_name": "Sure",
   "description": "Verify Ethiopian bank transfer receipts in real-time. Protect your business from payment scams.",
   "start_url": "/",
   "display": "standalone",

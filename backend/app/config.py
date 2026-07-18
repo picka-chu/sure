@@ -20,7 +20,7 @@ class Settings:
     DATABASE_URL: str = _fix_db_url(
         os.getenv(
             "DATABASE_URL",
-            "postgresql+asyncpg://postgres:postgres@localhost:5432/verifypay",
+            "postgresql+asyncpg://postgres:postgres@localhost:5432/sure",
         )
     )
     DATABASE_SSL: bool = os.getenv("DATABASE_SSL", "false").lower() == "true"

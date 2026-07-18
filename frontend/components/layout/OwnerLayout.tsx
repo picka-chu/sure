@@ -52,7 +52,7 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
           <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center">
             <ShieldCheck size={18} className="text-white" />
           </div>
-          <span className="font-semibold text-surface-900">VerifyPay</span>
+          <span className="font-semibold text-surface-900">Sure</span>
         </div>
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -79,7 +79,7 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
             <ShieldCheck size={20} className="text-white" />
           </div>
           <div>
-            <span className="font-bold text-surface-900">VerifyPay</span>
+            <span className="font-bold text-surface-900">Sure</span>
             <p className="text-xs text-surface-400">Business Dashboard</p>
           </div>
         </div>

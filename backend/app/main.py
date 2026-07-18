@@ -4,7 +4,7 @@ from app.config import settings
 from app.api import auth, businesses, banks, staff, verifications, analytics
 
 app = FastAPI(
-    title="VerifyPay - Bank Transfer Verifier",
+    title="Sure - Bank Transfer Verifier",
     description="SaaS platform for Ethiopian businesses to verify bank transfer receipts",
     version="1.0.0",
 )
@@ -27,4 +27,4 @@ app.include_router(analytics.router)
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "service": "VerifyPay API"}
+    return {"status": "ok", "service": "Sure API"}

@@ -25,7 +25,7 @@ export default function AuthLayout({ children, title, subtitle }: AuthLayoutProp
       </div>
       <div className="text-center pb-6">
         <p className="text-xs text-surface-400">
-          &copy; {new Date().getFullYear()} VerifyPay. All rights reserved.
+          &copy; {new Date().getFullYear()} Sure. All rights reserved.
         </p>
       </div>
     </div>

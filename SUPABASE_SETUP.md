@@ -5,7 +5,7 @@
 1. Go to [supabase.com](https://supabase.com) and sign in (or create an account)
 2. Click **New Project**
 3. Enter:
-   - **Name**: `verifypay` (or any name)
+   - **Name**: `sure` (or any name)
    - **Database Password**: Create a strong password (save this)
    - **Region**: Pick one close to Ethiopia (e.g., `South Africa` or `Europe West`)
 4. Click **Create new project** (takes ~2 minutes)

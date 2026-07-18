@@ -2,14 +2,14 @@ import type { Metadata, Viewport } from "next";
 import "@/styles/globals.css";
 
 export const metadata: Metadata = {
-  title: "VerifyPay - Bank Transfer Verifier",
+  title: "Sure - Bank Transfer Verifier",
   description:
     "Verify Ethiopian bank transfer receipts in real-time. Protect your business from payment scams.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "VerifyPay",
+    title: "Sure",
   },
 };
 

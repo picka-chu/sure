@@ -38,7 +38,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
               <ShieldCheck size={18} className="text-white" />
             </div>
             <div>
-              <span className="font-semibold text-surface-900">VerifyPay</span>
+              <span className="font-semibold text-surface-900">Sure</span>
               {staff && (
                 <p className="text-xs text-surface-400">{staff.business_name}</p>
               )}

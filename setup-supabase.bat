@@ -1,7 +1,7 @@
 @echo off
-title VerifyPay - Supabase Setup
+title Sure - Supabase Setup
 echo ============================================
-echo   VerifyPay - Supabase Database Setup
+echo   Sure - Supabase Database Setup
 echo ============================================
 echo.
 echo This script will help you configure Supabase.
