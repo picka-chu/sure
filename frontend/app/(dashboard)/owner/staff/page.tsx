@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { Plus, Users, Pencil, Trash2, Key, Mail } from "lucide-react";
+import { Plus, Users, Pencil, Trash2, Key, Mail, AlertTriangle } from "lucide-react";
 import { staffApi, authApi } from "@/lib/api";
 import { StaffMember } from "@/lib/types";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -17,6 +17,7 @@ export default function StaffManagementPage() {
   const [form, setForm] = useState({ full_name: "", email: "", pin: "" });
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [formError, setFormError] = useState("");
 
   const suggestedEmail = useMemo(() => {
     if (!form.full_name || editingId) return "";
@@ -37,7 +38,7 @@ export default function StaffManagementPage() {
       const res = await staffApi.list();
       setStaff(res.data);
     } catch {
-      // handle error
+      setFormError("Failed to load staff");
     } finally {
       setLoading(false);
     }
@@ -58,7 +59,7 @@ export default function StaffManagementPage() {
       setForm({ full_name: "", email: "", pin: "" });
       loadStaff();
     } catch {
-      // handle error
+      setFormError("Failed to save staff member");
     } finally {
       setSaving(false);
     }
@@ -70,7 +71,7 @@ export default function StaffManagementPage() {
       await staffApi.delete(id);
       loadStaff();
     } catch {
-      // handle error
+      setFormError("Failed to delete staff member");
     }
   };
 
@@ -111,6 +112,14 @@ export default function StaffManagementPage() {
           <CardHeader>
             <CardTitle>{editingId ? "Edit" : "Add"} Staff Member</CardTitle>
           </CardHeader>
+          {formError && (
+            <div className="px-6 pb-2">
+              <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700 flex items-center gap-2">
+                <AlertTriangle size={14} />
+                {formError}
+              </div>
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
               label="Full Name"
@@ -232,12 +241,14 @@ export default function StaffManagementPage() {
                   <button
                     onClick={() => handleEdit(member)}
                     className="p-2 rounded-lg hover:bg-surface-100 text-surface-400 hover:text-emerald-600"
+                    aria-label={`Edit ${member.full_name}`}
                   >
                     <Pencil size={16} />
                   </button>
                   <button
                     onClick={() => handleDelete(member.id)}
                     className="p-2 rounded-lg hover:bg-red-50 text-surface-400 hover:text-red-600"
+                    aria-label={`Delete ${member.full_name}`}
                   >
                     <Trash2 size={16} />
                   </button>

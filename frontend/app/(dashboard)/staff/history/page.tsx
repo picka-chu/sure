@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { History, ArrowLeft } from "lucide-react";
+import { History, ArrowLeft, AlertTriangle } from "lucide-react";
 import { verificationApi } from "@/lib/api";
 import { Verification } from "@/lib/types";
 import { formatCurrency, formatDate, getStatusColor, getBankName } from "@/lib/utils";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/Badge";
 export default function StaffHistoryPage() {
   const [verifications, setVerifications] = useState<Verification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [page, setPage] = useState(0);
 
   useEffect(() => {
@@ -27,7 +28,7 @@ export default function StaffHistoryPage() {
         page === 0 ? res.data : [...prev, ...res.data]
       );
     } catch {
-      // silently fail
+      setError("Failed to load history");
     } finally {
       setLoading(false);
     }
@@ -41,6 +42,13 @@ export default function StaffHistoryPage() {
           Your recent verifications
         </p>
       </div>
+
+      {error && (
+        <div className="flex items-center gap-2 p-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700">
+          <AlertTriangle size={14} />
+          {error}
+        </div>
+      )}
 
       {verifications.length === 0 && !loading && (
         <div className="text-center py-16">

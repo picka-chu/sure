@@ -68,7 +68,7 @@ export default function SubscriptionWelcomeModal({ businessName, trialEndDate, d
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
         <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-scale-in">
-          <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-lg hover:bg-surface-100 text-surface-400 hover:text-surface-600 z-10">
+          <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-lg hover:bg-surface-100 text-surface-400 hover:text-surface-600 z-10" aria-label="Close welcome modal">
             <X size={18} />
           </button>
 
@@ -115,7 +115,7 @@ export default function SubscriptionWelcomeModal({ businessName, trialEndDate, d
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-scale-in">
-        <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-lg hover:bg-surface-100 text-surface-400 hover:text-surface-600 z-10">
+        <button onClick={onClose} className="absolute top-4 right-4 p-2 rounded-lg hover:bg-surface-100 text-surface-400 hover:text-surface-600 z-10" aria-label="Close welcome modal">
           <X size={18} />
         </button>
 

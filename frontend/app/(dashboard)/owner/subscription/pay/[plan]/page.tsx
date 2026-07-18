@@ -35,8 +35,16 @@ export default function PayPage({ params }: { params: Promise<{ plan: string }> 
   const [copiedTele, setCopiedTele] = useState(false);
 
   useEffect(() => {
-    subscriptionApi.getPaymentAccounts().then((res) => setAccounts(res.data)).catch(() => {});
+    subscriptionApi.getPaymentAccounts().then((res) => setAccounts(res.data)).catch(() => {
+      setError("Failed to load payment accounts");
+    });
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (preview) URL.revokeObjectURL(preview);
+    };
+  }, [preview]);
 
   const isYearly = plan === "yearly";
   const amount = isYearly ? 7500 : 750;
@@ -90,7 +98,9 @@ export default function PayPage({ params }: { params: Promise<{ plan: string }> 
       await navigator.clipboard.writeText(text);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch {}
+    } catch {
+      console.error("Failed to copy to clipboard");
+    }
   };
 
   if (success) {
@@ -206,6 +216,7 @@ export default function PayPage({ params }: { params: Promise<{ plan: string }> 
                   <button
                     onClick={() => handleCopy(accounts[paymentMethod].account_number, paymentMethod === "cbe" ? setCopiedCbe : setCopiedTele)}
                     className="p-2 rounded-lg hover:bg-surface-100 text-surface-400 hover:text-surface-600"
+                    aria-label="Copy account number"
                   >
                     {(paymentMethod === "cbe" ? copiedCbe : copiedTele) ? <Check size={16} className="text-emerald-600" /> : <Copy size={16} />}
                   </button>

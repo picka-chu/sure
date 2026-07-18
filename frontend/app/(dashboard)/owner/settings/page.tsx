@@ -49,7 +49,7 @@ export default function SettingsPage() {
         address: res.data.address || "",
       });
     } catch {
-      // ignore
+      console.error("Failed to load business profile");
     }
   };
 
@@ -176,6 +176,7 @@ export default function SettingsPage() {
               type="button"
               onClick={() => setShowCurrent(!showCurrent)}
               className="absolute right-3 top-[38px] text-surface-400 hover:text-surface-600"
+              aria-label={showCurrent ? "Hide current password" : "Show current password"}
             >
               {showCurrent ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
@@ -192,6 +193,7 @@ export default function SettingsPage() {
               type="button"
               onClick={() => setShowNew(!showNew)}
               className="absolute right-3 top-[38px] text-surface-400 hover:text-surface-600"
+              aria-label={showNew ? "Hide new password" : "Show new password"}
             >
               {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>

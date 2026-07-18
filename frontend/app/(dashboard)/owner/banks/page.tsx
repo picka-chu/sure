@@ -23,6 +23,7 @@ export default function BanksPage() {
   });
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [formError, setFormError] = useState("");
 
   useEffect(() => {
     loadAccounts();
@@ -34,7 +35,7 @@ export default function BanksPage() {
       const res = await banksApi.list();
       setAccounts(res.data);
     } catch {
-      // handle error
+      setFormError("Failed to load bank accounts");
     } finally {
       setLoading(false);
     }
@@ -45,7 +46,7 @@ export default function BanksPage() {
       const res = await banksApi.getSupported();
       setSupportedBanks(res.data.banks);
     } catch {
-      // ignore
+      console.error("Failed to load supported banks");
     }
   };
 
@@ -63,7 +64,7 @@ export default function BanksPage() {
       setForm({ bank_name: "cbe", account_holder_name: "", account_number: "", initial_balance: 0 });
       loadAccounts();
     } catch {
-      // handle error
+      setFormError("Failed to save bank account");
     } finally {
       setSaving(false);
     }
@@ -75,7 +76,7 @@ export default function BanksPage() {
       await banksApi.delete(id);
       loadAccounts();
     } catch {
-      // handle error
+      setFormError("Failed to delete bank account");
     }
   };
 
@@ -110,6 +111,14 @@ export default function BanksPage() {
           <CardHeader>
             <CardTitle>{editingId ? "Edit" : "Add"} Bank Account</CardTitle>
           </CardHeader>
+          {formError && (
+            <div className="px-6 pb-2">
+              <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700 flex items-center gap-2">
+                <AlertTriangle size={14} />
+                {formError}
+              </div>
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-surface-700 mb-1.5">
@@ -210,12 +219,14 @@ export default function BanksPage() {
                   <button
                     onClick={() => handleEdit(acc)}
                     className="p-2 rounded-lg hover:bg-surface-100 text-surface-400 hover:text-emerald-600"
+                    aria-label={`Edit ${getBankName(acc.bank_name)} account`}
                   >
                     <Pencil size={16} />
                   </button>
                   <button
                     onClick={() => handleDelete(acc.id)}
                     className="p-2 rounded-lg hover:bg-red-50 text-surface-400 hover:text-red-600"
+                    aria-label={`Delete ${getBankName(acc.bank_name)} account`}
                   >
                     <Trash2 size={16} />
                   </button>

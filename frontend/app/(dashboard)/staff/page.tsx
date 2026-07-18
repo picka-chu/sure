@@ -19,6 +19,7 @@ export default function StaffPage() {
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<VerifyResult | null>(null);
   const [showResult, setShowResult] = useState(false);
+  const [loadError, setLoadError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const [cameraActive, setCameraActive] = useState(false);
@@ -33,7 +34,7 @@ export default function StaffPage() {
       const res = await verificationApi.staffToday();
       setStats(res.data);
     } catch {
-      // silently fail
+      setLoadError("Failed to load today's stats");
     }
   };
 
@@ -141,6 +142,13 @@ export default function StaffPage() {
         <p className="text-sm text-surface-500 mt-1">Scan customer receipt to verify</p>
       </div>
 
+      {loadError && (
+        <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700 flex items-center gap-2">
+          <XCircle size={14} />
+          {loadError}
+        </div>
+      )}
+
       <div className="grid grid-cols-3 gap-3">
         <Card padding="sm" className="text-center">
           <p className="text-2xl font-bold text-surface-900">{stats.total}</p>
@@ -193,6 +201,7 @@ export default function StaffPage() {
           <button
             onClick={stopCamera}
             className="absolute top-4 right-4 text-white/70 hover:text-white"
+            aria-label="Close camera"
           >
             <XCircle size={24} />
           </button>

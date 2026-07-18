@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Filter, History } from "lucide-react";
+import { Search, Filter, History, AlertTriangle } from "lucide-react";
 import { verificationApi } from "@/lib/api";
 import { Verification } from "@/lib/types";
 import {
@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/Badge";
 export default function HistoryPage() {
   const [verifications, setVerifications] = useState<Verification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [page, setPage] = useState(0);
@@ -35,7 +36,7 @@ export default function HistoryPage() {
         page === 0 ? res.data : [...prev, ...res.data]
       );
     } catch {
-      // handle error
+      setError("Failed to load verifications");
     } finally {
       setLoading(false);
     }
@@ -61,6 +62,13 @@ export default function HistoryPage() {
           View all payment verifications
         </p>
       </div>
+
+      {error && (
+        <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700 flex items-center gap-2">
+          <AlertTriangle size={16} />
+          {error}
+        </div>
+      )}
 
       <div className="flex gap-3">
         <div className="relative flex-1">

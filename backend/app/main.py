@@ -1,3 +1,5 @@
+import logging
+import json
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
@@ -5,6 +7,37 @@ from slowapi.errors import RateLimitExceeded
 from app.config import settings
 from app.limiter import limiter
 from app.api import auth, businesses, banks, staff, verifications, analytics, subscription
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(message)s',
+)
+log_handler = logging.StreamHandler()
+log_handler.setFormatter(logging.Formatter(
+    fmt='%(message)s'
+))
+logging.getLogger().handlers = [log_handler]
+
+
+class JsonFormatter(logging.Formatter):
+    def format(self, record):
+        log_entry = {
+            "timestamp": self.formatTime(record),
+            "level": record.levelname,
+            "name": record.name,
+            "message": record.getMessage(),
+        }
+        if record.exc_info and record.exc_info[0]:
+            log_entry["exception"] = self.formatException(record.exc_info)
+        return json.dumps(log_entry)
+
+
+json_handler = logging.StreamHandler()
+json_handler.setFormatter(JsonFormatter())
+logging.getLogger().handlers = [json_handler]
+logging.getLogger().setLevel(logging.INFO)
+
+logger = logging.getLogger("sure")
 
 app = FastAPI(
     title="Sure - Bank Transfer Verifier",

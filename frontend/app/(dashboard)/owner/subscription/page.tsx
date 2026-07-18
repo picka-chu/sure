@@ -229,7 +229,9 @@ function PaymentHistory() {
   useEffect(() => {
     subscriptionApi.getPaymentHistory().then((res) => {
       setPayments(res.data);
-    }).catch(() => {}).finally(() => setLoading(false));
+    }).catch(() => {
+      console.error("Failed to load payment history");
+    }).finally(() => setLoading(false));
   }, []);
 
   if (loading) return <p className="text-sm text-surface-400">Loading...</p>;

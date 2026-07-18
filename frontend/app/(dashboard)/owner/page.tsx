@@ -27,6 +27,7 @@ export default function OwnerDashboard() {
   const [subscription, setSubscription] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [error, setError] = useState("");
   const router = useRouter();
 
   useEffect(() => {
@@ -45,7 +46,7 @@ export default function OwnerDashboard() {
       const res = await analyticsApi.dashboard();
       setData(res.data);
     } catch {
-      // handle error
+      setError("Failed to load dashboard data");
     } finally {
       setLoading(false);
     }
@@ -56,7 +57,7 @@ export default function OwnerDashboard() {
       const res = await subscriptionApi.getStatus();
       setSubscription(res.data);
     } catch {
-      // ignore
+      console.error("Failed to load subscription status");
     }
   };
 
@@ -109,6 +110,13 @@ export default function OwnerDashboard() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      {error && (
+        <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700 flex items-center gap-2">
+          <AlertTriangle size={16} />
+          {error}
+        </div>
+      )}
+
       {showWelcome && subscription && (
         <SubscriptionWelcomeModal
           businessName={JSON.parse(localStorage.getItem("owner_user") || "{}").business_name || "Business"}

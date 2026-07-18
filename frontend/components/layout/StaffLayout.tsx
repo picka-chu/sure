@@ -29,7 +29,9 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
       if (res.data.status === "expired" || res.data.status === "cancelled") {
         setSubExpired(true);
       }
-    }).catch(() => {});
+    }).catch(() => {
+      console.error("Failed to load subscription status");
+    });
   }, [ready]);
 
   const handleLogout = () => {
@@ -62,6 +64,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
             <button
               onClick={handleLogout}
               className="p-2 rounded-lg hover:bg-red-50 text-surface-400 hover:text-red-600 transition-colors"
+              aria-label="Sign out"
             >
               <LogOut size={18} />
             </button>

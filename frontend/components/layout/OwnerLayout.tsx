@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -57,7 +57,9 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
       } else if (sub.status === "trial" && sub.days_remaining <= 0) {
         setSubBanner({ type: "error", message: "Your trial has ended. Subscribe to continue using Sure." });
       }
-    }).catch(() => {});
+    }).catch(() => {
+      console.error("Failed to load subscription status");
+    });
   }, [user, pathname]);
 
   const handleLogout = () => {
@@ -78,6 +80,7 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="p-2 rounded-lg hover:bg-surface-100"
+          aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
         >
           {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
@@ -145,6 +148,7 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
               <button
                 onClick={handleLogout}
                 className="p-2 rounded-lg hover:bg-red-50 text-surface-400 hover:text-red-600 transition-colors"
+                aria-label="Sign out"
               >
                 <LogOut size={18} />
               </button>
