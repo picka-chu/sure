@@ -26,6 +26,8 @@ COPY --from=builder /app/package.json ./package.json
 COPY start.sh /app/start.sh
 RUN chmod +x /app/start.sh
 
+RUN chown -R nextjs:nodejs /app/public
+
 USER nextjs
 
 EXPOSE 3000
