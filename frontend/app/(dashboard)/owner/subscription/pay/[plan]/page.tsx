@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import {
   CreditCard,
   Smartphone,
@@ -18,8 +18,9 @@ import Button from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { subscriptionApi } from "@/lib/api";
 
-export default function PayPage({ params }: { params: Promise<{ plan: string }> }) {
-  const { plan } = use(params);
+export default function PayPage() {
+  const params = useParams<{ plan: string }>();
+  const plan = params.plan;
   const router = useRouter();
   const [paymentMethod, setPaymentMethod] = useState<"cbe" | "telebirr" | null>(null);
   const [accounts, setAccounts] = useState<any>({});
