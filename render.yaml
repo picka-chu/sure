@@ -1,0 +1,45 @@
+services:
+  - type: web
+    name: surepay-backend
+    runtime: image
+    repo: https://github.com/picka-chu/sure
+    branch: master
+    dockerfilePath: ./backend/Dockerfile
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_SSL
+        value: "true"
+      - key: DATABASE_POOLER
+        value: "true"
+      - key: SECRET_KEY
+        sync: false
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "10080"
+      - key: FRONTEND_URL
+        value: https://surepay.onrender.com
+      - key: REDIS_URL
+        sync: false
+      - key: UPLOAD_DIR
+        value: ./uploads
+    healthCheckPath: /api/health
+    autoDeploy: true
+
+  - type: web
+    name: surepay-frontend
+    runtime: image
+    repo: https://github.com/picka-chu/sure
+    branch: master
+    dockerfilePath: ./frontend/Dockerfile
+    buildFilter:
+      paths:
+        - frontend/**
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        value: https://surepay-backend.onrender.com
+      - key: NODE_ENV
+        value: production
+    healthCheckPath: /
+    autoDeploy: true
