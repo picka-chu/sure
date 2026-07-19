@@ -48,67 +48,53 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
   if (!ready) return null;
 
   return (
-    <div className="min-h-screen bg-surface-50 pb-20">
-      <header className="bg-white border-b border-surface-200 px-4 py-3 sticky top-0 z-30">
+    <div className="min-h-screen bg-[#f7f7f7] pb-20">
+      <header className="bg-white border-b border-[#e9e9e7] px-3 py-2 sticky top-0 z-30">
         <div className="flex items-center justify-between max-w-lg mx-auto">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center">
-              <ShieldCheck size={18} className="text-white" />
+            <div className="w-7 h-7 rounded bg-[#115ce9] flex items-center justify-center">
+              <ShieldCheck size={14} className="text-white" />
             </div>
             <div>
-              <span className="font-semibold text-surface-900">Surepay</span>
+              <span className="font-semibold text-[#37352f] text-[15px]">Surepay</span>
               {staff && (
-                <p className="text-xs text-surface-400">{staff.business_name}</p>
+                <p className="text-[11px] text-[#9b9a97]">{staff.business_name}</p>
               )}
             </div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {staff && (
-              <span className="text-sm text-surface-500">{staff.full_name}</span>
+              <span className="text-[13px] text-[#787774]">{staff.full_name}</span>
             )}
-            <button
-              onClick={handleLogout}
-              className="p-2 rounded-lg hover:bg-red-50 text-surface-400 hover:text-red-600 transition-colors"
-              aria-label="Sign out"
-            >
-              <LogOut size={18} />
+            <button onClick={handleLogout} className="p-1.5 rounded hover:bg-[#f7f7f7] text-[#9b9a97] hover:text-[#e03e3e]" aria-label="Sign out">
+              <LogOut size={14} />
             </button>
           </div>
         </div>
       </header>
 
       {subExpired && (
-        <div className="bg-red-50 border-b border-red-100 px-4 py-2.5 text-sm text-red-700 flex items-center gap-2 justify-center">
+        <div className="bg-[#fde7e5] border-b border-[#f5cdc9] px-3 py-2 text-[13px] text-[#c73c3c] flex items-center gap-2 justify-center">
           <AlertTriangle size={14} />
           <span>Business subscription expired. Contact your owner to renew.</span>
         </div>
       )}
 
-      <main className="max-w-lg mx-auto px-4 py-4">{children}</main>
+      <main className="max-w-lg mx-auto px-3 py-4">{children}</main>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-surface-200 z-30">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-[#e9e9e7] z-30">
         <div className="max-w-lg mx-auto flex">
-          <Link
-            href="/staff"
-            className={`flex-1 flex flex-col items-center py-3 text-xs font-medium transition-colors ${
-              pathname === "/staff"
-                ? "text-primary-600"
-                : "text-surface-400 hover:text-surface-600"
-            }`}
-          >
-            <ShieldCheck size={22} />
-            <span className="mt-1">Verify</span>
+          <Link href="/staff" className={`flex-1 flex flex-col items-center py-2.5 text-[11px] font-medium transition-colors ${
+            pathname === "/staff" ? "text-[#115ce9]" : "text-[#9b9a97] hover:text-[#37352f]"
+          }`}>
+            <ShieldCheck size={20} />
+            <span className="mt-0.5">Verify</span>
           </Link>
-          <Link
-            href="/staff/history"
-            className={`flex-1 flex flex-col items-center py-3 text-xs font-medium transition-colors ${
-              pathname === "/staff/history"
-                ? "text-primary-600"
-                : "text-surface-400 hover:text-surface-600"
-            }`}
-          >
-            <History size={22} />
-            <span className="mt-1">History</span>
+          <Link href="/staff/history" className={`flex-1 flex flex-col items-center py-2.5 text-[11px] font-medium transition-colors ${
+            pathname === "/staff/history" ? "text-[#115ce9]" : "text-[#9b9a97] hover:text-[#37352f]"
+          }`}>
+            <History size={20} />
+            <span className="mt-0.5">History</span>
           </Link>
         </div>
       </nav>

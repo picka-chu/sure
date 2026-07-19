@@ -55,70 +55,67 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   return (
-    <div className="min-h-screen bg-surface-50">
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-surface-200 px-4 py-3 flex items-center justify-between">
+    <div className="min-h-screen bg-[#f7f7f7]">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-[#e9e9e7] px-3 py-2.5 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center">
-            <ShieldCheck size={18} className="text-white" />
+          <div className="w-7 h-7 rounded bg-[#115ce9] flex items-center justify-center">
+            <ShieldCheck size={14} className="text-white" />
           </div>
-          <span className="font-semibold text-surface-900">Surepay Admin</span>
+          <span className="font-semibold text-[#37352f] text-[15px]">Surepay Admin</span>
         </div>
-        <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 rounded-lg hover:bg-surface-100" aria-label={sidebarOpen ? "Close" : "Open"}>
-          {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
+        <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1.5 rounded hover:bg-[#f7f7f7]" aria-label={sidebarOpen ? "Close" : "Open"}>
+          {sidebarOpen ? <X size={18} /> : <Menu size={18} />}
         </button>
       </div>
 
-      <div className={`fixed inset-0 z-40 bg-black/50 lg:hidden transition-opacity ${sidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`} onClick={() => setSidebarOpen(false)} />
+      <div className={`fixed inset-0 z-40 bg-black/30 lg:hidden transition-opacity ${sidebarOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`} onClick={() => setSidebarOpen(false)} />
 
-      <aside className={`fixed top-0 left-0 z-50 h-full w-64 bg-white border-r border-surface-200 transform transition-transform duration-200 lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
-        <div className="flex items-center gap-2 px-6 py-5 border-b border-surface-100">
-          <div className="w-9 h-9 rounded-xl bg-primary-600 flex items-center justify-center shadow-sm">
-            <ShieldCheck size={20} className="text-white" />
+      <aside className={`fixed top-0 left-0 z-50 h-full w-64 bg-[#f7f7f7] border-r border-[#e9e9e7] transform transition-transform duration-200 lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+        <div className="flex items-center gap-2 px-3 py-3 border-b border-[#e9e9e7]">
+          <div className="w-7 h-7 rounded bg-[#115ce9] flex items-center justify-center">
+            <ShieldCheck size={14} className="text-white" />
           </div>
-          <div>
-            <span className="font-bold text-surface-900">Surepay</span>
-            <p className="text-xs text-surface-400">Admin Panel</p>
-          </div>
+          <span className="font-bold text-[#37352f] text-[15px]">Surepay</span>
         </div>
 
-        <nav className="p-4 space-y-1">
+        <nav className="p-2 space-y-0.5">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               onClick={() => setSidebarOpen(false)}
-              className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                isActive(item.href) ? "bg-primary-50 text-primary-700" : "text-surface-600 hover:bg-surface-50 hover:text-surface-900"
+              className={`flex items-center gap-2 px-2 py-1.5 rounded-[3px] text-[14px] transition-colors ${
+                isActive(item.href) ? "bg-[#e9e9e7] text-[#37352f]" : "text-[#787774] hover:bg-[#e9e9e7] hover:text-[#37352f]"
               }`}
             >
-              <item.icon size={18} />
+              <item.icon size={16} />
               {item.label}
             </Link>
           ))}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-surface-100">
+        <div className="absolute bottom-0 left-0 right-0 p-2 border-t border-[#e9e9e7]">
           {user && (
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-primary-100 flex items-center justify-center">
-                  <span className="text-sm font-medium text-primary-700">{user.full_name?.charAt(0)?.toUpperCase()}</span>
+            <div className="flex items-center justify-between px-1 py-1">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded bg-[#e9e9e7] flex items-center justify-center">
+                  <span className="text-[11px] font-medium text-[#37352f]">{user.full_name?.charAt(0)?.toUpperCase()}</span>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-surface-900 truncate max-w-[120px]">{user.full_name}</p>
-                  <p className="text-xs text-surface-400">Admin</p>
+                  <p className="text-[13px] font-medium text-[#37352f] truncate max-w-[120px]">{user.full_name}</p>
+                  <p className="text-[11px] text-[#9b9a97]">Admin</p>
                 </div>
               </div>
-              <button onClick={handleLogout} className="p-2 rounded-lg hover:bg-red-50 text-surface-400 hover:text-red-600" aria-label="Sign out">
-                <LogOut size={18} />
+              <button onClick={handleLogout} className="p-1 rounded hover:bg-[#e9e9e7] text-[#9b9a97] hover:text-[#e03e3e]" aria-label="Sign out">
+                <LogOut size={14} />
               </button>
             </div>
           )}
         </div>
       </aside>
 
-      <main className="lg:ml-64 pt-16 lg:pt-0 min-h-screen">
-        <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">{children}</div>
+      <main className="lg:ml-64 pt-12 lg:pt-0 min-h-screen">
+        <div className="px-4 py-5 md:px-6 lg:px-8 max-w-7xl mx-auto">{children}</div>
       </main>
     </div>
   );

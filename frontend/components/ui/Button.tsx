@@ -25,26 +25,26 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const base =
-      "inline-flex items-center justify-center font-medium rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
+      "inline-flex items-center justify-center font-medium transition-all duration-150 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed select-none";
 
     const variants = {
       primary:
-        "bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 shadow-sm hover:shadow-md active:scale-[0.98]",
+        "bg-[#115ce9] text-white hover:bg-[#0d4fcc] active:bg-[#0a3d9e] rounded-[3px]",
       secondary:
-        "bg-surface-100 text-surface-900 hover:bg-surface-200 focus:ring-surface-500",
+        "bg-[#e9e9e7] text-[#37352f] hover:bg-[#dcdcd9] active:bg-[#d0d0cd] rounded-[3px]",
       outline:
-        "border-2 border-surface-200 text-surface-700 hover:bg-surface-50 hover:border-surface-300 focus:ring-surface-500",
+        "border border-[#e9e9e7] text-[#37352f] hover:bg-[#f7f7f7] active:bg-[#efefef] rounded-[3px]",
       ghost:
-        "text-surface-600 hover:bg-surface-100 hover:text-surface-900 focus:ring-surface-500",
+        "text-[#787774] hover:bg-[#f7f7f7] hover:text-[#37352f] rounded-[3px]",
       danger:
-        "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 shadow-sm",
+        "bg-[#e03e3e] text-white hover:bg-[#c73c3c] active:bg-[#ae3737] rounded-[3px]",
     };
 
     const sizes = {
-      sm: "px-3 py-1.5 text-sm gap-1.5",
-      md: "px-4 py-2.5 text-sm gap-2",
-      lg: "px-6 py-3 text-base gap-2",
-      xl: "px-8 py-4 text-lg gap-3",
+      sm: "px-2.5 py-1 text-[13px] gap-1.5",
+      md: "px-3 py-1.5 text-[14px] gap-2",
+      lg: "px-4 py-2 text-[15px] gap-2",
+      xl: "px-5 py-2.5 text-[16px] gap-3",
     };
 
     return (
