@@ -26,6 +26,9 @@ async def seed(force: bool = False):
         await conn.run_sync(_create_payments_table)
 
 
+SUPER_ADMIN_ID = UUID("00000000-0000-0000-0000-000000000099")
+
+
 def _migrate_business_columns(conn):
     from sqlalchemy import text
     import sqlalchemy as sa
@@ -37,6 +40,9 @@ def _migrate_business_columns(conn):
         conn.execute(text("ALTER TABLE businesses ADD COLUMN subscription_start_date TIMESTAMPTZ"))
     if "subscription_end_date" not in columns:
         conn.execute(text("ALTER TABLE businesses ADD COLUMN subscription_end_date TIMESTAMPTZ"))
+    user_columns = [c["name"] for c in inspector.get_columns("users")]
+    if "is_super_admin" not in user_columns:
+        conn.execute(text("ALTER TABLE users ADD COLUMN is_super_admin BOOLEAN DEFAULT FALSE"))
 
 
 def _create_payments_table(conn):
@@ -216,6 +222,23 @@ def _create_payments_table(conn):
         ]
         for v in sample_verifications:
             db.add(v)
+
+        try:
+            existing_admin = await db.execute(select(User).where(User.email == "admin@surepay.et"))
+            if not existing_admin.scalar_one_or_none():
+                admin_user = User(
+                    id=SUPER_ADMIN_ID,
+                    business_id=DEMO_BUSINESS_ID,
+                    email="admin@surepay.et",
+                    full_name="Super Admin",
+                    role="super_admin",
+                    is_super_admin=True,
+                )
+                admin_user.set_password("Admin@1234")
+                db.add(admin_user)
+                print("Super admin created: admin@surepay.et / Admin@1234")
+        except Exception as e:
+            print(f"Note: Could not seed super admin: {e}")
 
         await db.commit()
         print("Demo data created successfully!")

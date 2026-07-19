@@ -16,6 +16,7 @@ from app.services.auth_service import (
     login_owner,
     login_staff_by_email,
     change_owner_password,
+    login_admin,
 )
 from app.limiter import limiter
 
@@ -49,6 +50,16 @@ async def login(request: Request, req: LoginRequest, db: AsyncSession = Depends(
 async def staff_login(request: Request, req: StaffEmailLoginRequest, db: AsyncSession = Depends(get_db)):
     try:
         result = await login_staff_by_email(db, req.email, req.pin)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+
+
+@router.post("/admin/login")
+@limiter.limit("10/minute")
+async def admin_login(request: Request, req: LoginRequest, db: AsyncSession = Depends(get_db)):
+    try:
+        result = await login_admin(db, req.email, req.password)
         return result
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))

@@ -141,6 +141,27 @@ async def login_staff_by_email(db: AsyncSession, email: str, pin: str) -> dict:
     }
 
 
+async def login_admin(db: AsyncSession, email: str, password: str) -> dict:
+    result = await db.execute(select(User).where(User.email == email))
+    user = result.scalar_one_or_none()
+    if not user or not user.verify_password(password):
+        raise ValueError("Invalid email or password")
+    if not user.is_super_admin:
+        raise ValueError("Not authorized as admin")
+
+    token = create_access_token({"sub": str(user.id), "role": "super_admin"})
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": {
+            "id": str(user.id),
+            "email": user.email,
+            "full_name": user.full_name,
+            "role": "super_admin",
+        },
+    }
+
+
 async def login_staff(db: AsyncSession, pin: str, business_code: str) -> dict:
     result = await db.execute(
         select(Business).where(Business.id == UUID(business_code) if len(business_code) == 36 else Business.id == business_code)

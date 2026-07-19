@@ -133,3 +133,49 @@ export const subscriptionApi = {
   verifyPayment: (paymentId: string, data: { status: string; admin_notes?: string }) =>
     api.post(`/api/subscription/admin/verify-payment/${paymentId}`, data),
 };
+
+let adminApiInstance: AxiosInstance | null = null;
+
+function getAdminApi(): AxiosInstance {
+  if (!adminApiInstance) {
+    adminApiInstance = axios.create();
+    adminApiInstance.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+      config.baseURL = getApiBase();
+      const token = typeof window !== "undefined" ? localStorage.getItem("admin_token") : null;
+      if (token) config.headers.Authorization = `Bearer ${token}`;
+      return config;
+    });
+    adminApiInstance.interceptors.response.use(
+      (r) => r,
+      (error) => {
+        if (error.response?.status === 401 && typeof window !== "undefined") {
+          localStorage.removeItem("admin_token");
+          localStorage.removeItem("admin_user");
+          window.location.href = "/admin/login";
+        }
+        return Promise.reject(error);
+      }
+    );
+  }
+  return adminApiInstance;
+}
+
+const adminApi = getAdminApi();
+
+export const adminApiClient = {
+  login: (data: { email: string; password: string }) =>
+    api.post("/api/auth/admin/login", data),
+  dashboard: () => adminApi.get("/api/admin/dashboard"),
+  businesses: (params?: { search?: string; status?: string; limit?: number; offset?: number }) =>
+    adminApi.get("/api/admin/businesses", { params }),
+  getBusiness: (id: string) => adminApi.get(`/api/admin/businesses/${id}`),
+  toggleBusiness: (id: string) => adminApi.put(`/api/admin/businesses/${id}/toggle`),
+  payments: (params?: { status?: string; limit?: number; offset?: number }) =>
+    adminApi.get("/api/admin/payments", { params }),
+  verifyPayment: (id: string, data: { status: string; admin_notes?: string }) =>
+    adminApi.put(`/api/admin/payments/${id}/verify`, data),
+  verifications: (params?: { status?: string; limit?: number; offset?: number }) =>
+    adminApi.get("/api/admin/verifications", { params }),
+  staff: (params?: { limit?: number; offset?: number }) =>
+    adminApi.get("/api/admin/staff", { params }),
+};
