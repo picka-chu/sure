@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { Key, ArrowRight, Mail } from "lucide-react";
 import AuthLayout from "@/components/layout/AuthLayout";
@@ -82,9 +83,9 @@ export default function StaffLoginPage() {
         <div className="text-center pt-2">
           <p className="text-sm text-surface-500">
             Business owner?{" "}
-            <a href="/login" className="text-emerald-600 font-medium hover:text-emerald-700">
+            <Link href="/login" className="text-emerald-600 font-medium hover:text-emerald-700">
               Sign in here
-            </a>
+            </Link>
           </p>
         </div>
       </form>

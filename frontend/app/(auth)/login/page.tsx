@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import AuthLayout from "@/components/layout/AuthLayout";
@@ -91,15 +92,15 @@ export default function LoginPage() {
         <div className="text-center pt-2 space-y-1">
           <p className="text-sm text-surface-500">
             Don&apos;t have an account?{" "}
-            <a href="/register" className="text-emerald-600 font-medium hover:text-emerald-700">
+            <Link href="/register" className="text-emerald-600 font-medium hover:text-emerald-700">
               Register your business
-            </a>
+            </Link>
           </p>
           <p className="text-sm text-surface-500">
             Staff?{" "}
-            <a href="/staff/login" className="text-emerald-600 font-medium hover:text-emerald-700">
+            <Link href="/staff/login" className="text-emerald-600 font-medium hover:text-emerald-700">
               Login with email & PIN
-            </a>
+            </Link>
           </p>
         </div>
       </form>

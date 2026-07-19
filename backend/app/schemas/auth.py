@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional
 from uuid import UUID
 from datetime import datetime
@@ -10,6 +10,19 @@ class RegisterRequest(BaseModel):
     password: str
     full_name: str
     phone: Optional[str] = None
+
+    @field_validator("password")
+    @classmethod
+    def password_complexity(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        if not any(c.isupper() for c in v):
+            raise ValueError("Password must contain an uppercase letter")
+        if not any(c.islower() for c in v):
+            raise ValueError("Password must contain a lowercase letter")
+        if not any(c.isdigit() for c in v):
+            raise ValueError("Password must contain a digit")
+        return v
 
 
 class LoginRequest(BaseModel):
@@ -30,6 +43,19 @@ class StaffEmailLoginRequest(BaseModel):
 class ChangePasswordRequest(BaseModel):
     current_password: str
     new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def password_complexity(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters")
+        if not any(c.isupper() for c in v):
+            raise ValueError("Password must contain an uppercase letter")
+        if not any(c.islower() for c in v):
+            raise ValueError("Password must contain a lowercase letter")
+        if not any(c.isdigit() for c in v):
+            raise ValueError("Password must contain a digit")
+        return v
 
 
 class TokenResponse(BaseModel):

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
 import {
   LayoutDashboard,
   Building2,
@@ -112,7 +113,7 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
-              <a
+              <Link
                 key={item.href}
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
@@ -124,7 +125,7 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
               >
                 <item.icon size={18} />
                 {item.label}
-              </a>
+              </Link>
             );
           })}
         </nav>
@@ -165,9 +166,9 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
         }`}>
           {subBanner.type === "error" ? <AlertTriangle size={16} /> : <Clock size={16} />}
           <span className="flex-1">{subBanner.message}</span>
-          <a href="/owner/subscription" className="underline font-semibold shrink-0">
+          <Link href="/owner/subscription" className="underline font-semibold shrink-0">
             {subBanner.type === "error" ? "Renew Now" : "View Plans"}
-          </a>
+          </Link>
         </div>
       )}
 

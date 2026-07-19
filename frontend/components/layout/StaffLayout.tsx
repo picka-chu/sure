@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
 import { ShieldCheck, History, LogOut, User, AlertTriangle } from "lucide-react";
 import api from "@/lib/api";
 
@@ -83,7 +84,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
 
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-surface-200 z-30">
         <div className="max-w-lg mx-auto flex">
-          <a
+          <Link
             href="/staff"
             className={`flex-1 flex flex-col items-center py-3 text-xs font-medium transition-colors ${
               pathname === "/staff"
@@ -93,8 +94,8 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
           >
             <ShieldCheck size={22} />
             <span className="mt-1">Verify</span>
-          </a>
-          <a
+          </Link>
+          <Link
             href="/staff/history"
             className={`flex-1 flex flex-col items-center py-3 text-xs font-medium transition-colors ${
               pathname === "/staff/history"
@@ -104,7 +105,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
           >
             <History size={22} />
             <span className="mt-1">History</span>
-          </a>
+          </Link>
         </div>
       </nav>
     </div>
