@@ -1,12 +1,12 @@
 {
-  "name": "Sure",
-  "short_name": "Sure",
+  "name": "Surepay",
+  "short_name": "Surepay",
   "description": "Verify Ethiopian bank transfer receipts in real-time. Protect your business from payment scams.",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#ffffff",
-  "theme_color": "#059669",
+  "theme_color": "#115ce9",
   "icons": [
     {
       "src": "/icons/icon-192x192.png",

@@ -16,9 +16,9 @@ export default function Home() {
   }, [router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-white">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-white">
       <div className="text-center animate-pulse-slow">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-600 text-white shadow-lg shadow-emerald-200 mb-4">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary-600 text-white shadow-lg shadow-primary-200 mb-4">
           <ShieldCheck size={32} />
         </div>
         <p className="text-surface-500 text-sm">Redirecting...</p>

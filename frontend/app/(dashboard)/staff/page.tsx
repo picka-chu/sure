@@ -155,7 +155,7 @@ export default function StaffPage() {
           <p className="text-xs text-surface-400 mt-1">Total</p>
         </Card>
         <Card padding="sm" className="text-center">
-          <p className="text-2xl font-bold text-emerald-600">{stats.verified}</p>
+          <p className="text-2xl font-bold text-primary-600">{stats.verified}</p>
           <p className="text-xs text-surface-400 mt-1">Verified</p>
         </Card>
         <Card padding="sm" className="text-center">
@@ -172,7 +172,7 @@ export default function StaffPage() {
           </div>
           <div className="h-2 bg-surface-100 rounded-full overflow-hidden">
             <div
-              className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+              className="h-full bg-primary-500 rounded-full transition-all duration-500"
               style={{ width: `${verifiedPct}%` }}
             />
           </div>
@@ -209,13 +209,13 @@ export default function StaffPage() {
       ) : (
         <div
           onClick={() => setCapturing(true)}
-          className="relative aspect-[3/4] bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-2xl border-2 border-dashed border-emerald-200 flex flex-col items-center justify-center cursor-pointer hover:border-emerald-400 transition-colors"
+          className="relative aspect-[3/4] bg-gradient-to-br from-primary-50 to-primary-100 rounded-2xl border-2 border-dashed border-primary-200 flex flex-col items-center justify-center cursor-pointer hover:border-primary-400 transition-colors"
         >
-          <div className="w-20 h-20 rounded-full bg-emerald-100 flex items-center justify-center mb-4">
-            <Camera size={36} className="text-emerald-600" />
+          <div className="w-20 h-20 rounded-full bg-primary-100 flex items-center justify-center mb-4">
+            <Camera size={36} className="text-primary-600" />
           </div>
-          <p className="text-lg font-medium text-emerald-700">Tap to Capture</p>
-          <p className="text-sm text-emerald-500 mt-1">
+          <p className="text-lg font-medium text-primary-700">Tap to Capture</p>
+          <p className="text-sm text-primary-500 mt-1">
             Take photo of success dialog
           </p>
         </div>
@@ -233,7 +233,7 @@ export default function StaffPage() {
       {processing && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center">
           <Card className="text-center p-8 max-w-xs mx-auto">
-            <Loader2 size={40} className="animate-spin text-emerald-600 mx-auto mb-4" />
+            <Loader2 size={40} className="animate-spin text-primary-600 mx-auto mb-4" />
             <p className="font-medium text-surface-900">Verifying...</p>
             <p className="text-sm text-surface-500 mt-1">
               Checking with bank servers
@@ -267,8 +267,8 @@ function ResultScreen({
     <div className="animate-fade-in space-y-6">
       <div className="text-center">
         {isVerified ? (
-          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-emerald-100 mb-4">
-            <CheckCircle size={48} className="text-emerald-600" />
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-primary-100 mb-4">
+            <CheckCircle size={48} className="text-primary-600" />
           </div>
         ) : (
           <div className="inline-flex items-center justify-center w-24 h-24 rounded-full bg-red-100 mb-4">
@@ -277,7 +277,7 @@ function ResultScreen({
         )}
         <h2
           className={`text-2xl font-bold ${
-            isVerified ? "text-emerald-700" : "text-red-700"
+            isVerified ? "text-primary-700" : "text-red-700"
           }`}
         >
           {isVerified ? "Payment Verified!" : "Suspicious Payment"}
@@ -346,7 +346,7 @@ function ResultScreen({
       <div className="flex gap-3">
         <button
           onClick={onClose}
-          className="flex-1 py-3 px-4 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 transition-colors"
+          className="flex-1 py-3 px-4 bg-primary-600 text-white rounded-xl font-medium hover:bg-primary-700 transition-colors"
         >
           Verify Another
         </button>

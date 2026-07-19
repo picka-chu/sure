@@ -181,7 +181,7 @@ export default function BanksPage() {
 
       {loading ? (
         <div className="text-center py-16">
-          <div className="animate-spin w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full mx-auto" />
+          <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full mx-auto" />
         </div>
       ) : accounts.length === 0 ? (
         <Card className="text-center py-16">
@@ -197,8 +197,8 @@ export default function BanksPage() {
             <Card key={acc.id}>
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-4">
-                  <div className="p-3 rounded-xl bg-emerald-50">
-                    <Building2 size={24} className="text-emerald-600" />
+                  <div className="p-3 rounded-xl bg-primary-50">
+                    <Building2 size={24} className="text-primary-600" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-surface-900">
@@ -218,7 +218,7 @@ export default function BanksPage() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleEdit(acc)}
-                    className="p-2 rounded-lg hover:bg-surface-100 text-surface-400 hover:text-emerald-600"
+                    className="p-2 rounded-lg hover:bg-surface-100 text-surface-400 hover:text-primary-600"
                     aria-label={`Edit ${getBankName(acc.bank_name)} account`}
                   >
                     <Pencil size={16} />

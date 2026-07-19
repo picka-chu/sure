@@ -114,7 +114,7 @@ export default function SettingsPage() {
         </CardHeader>
         <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
           {profileSuccess && (
-            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-sm text-emerald-700">
+            <div className="p-3 rounded-xl bg-primary-50 border border-primary-100 text-sm text-primary-700">
               {profileSuccess}
             </div>
           )}
@@ -155,7 +155,7 @@ export default function SettingsPage() {
         </CardHeader>
         <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
           {passwordSuccess && (
-            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100 text-sm text-emerald-700">
+            <div className="p-3 rounded-xl bg-primary-50 border border-primary-100 text-sm text-primary-700">
               {passwordSuccess}
             </div>
           )}

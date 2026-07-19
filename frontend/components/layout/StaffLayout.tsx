@@ -52,11 +52,11 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
       <header className="bg-white border-b border-surface-200 px-4 py-3 sticky top-0 z-30">
         <div className="flex items-center justify-between max-w-lg mx-auto">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center">
               <ShieldCheck size={18} className="text-white" />
             </div>
             <div>
-              <span className="font-semibold text-surface-900">Sure</span>
+              <span className="font-semibold text-surface-900">Surepay</span>
               {staff && (
                 <p className="text-xs text-surface-400">{staff.business_name}</p>
               )}
@@ -92,7 +92,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
             href="/staff"
             className={`flex-1 flex flex-col items-center py-3 text-xs font-medium transition-colors ${
               pathname === "/staff"
-                ? "text-emerald-600"
+                ? "text-primary-600"
                 : "text-surface-400 hover:text-surface-600"
             }`}
           >
@@ -103,7 +103,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
             href="/staff/history"
             className={`flex-1 flex flex-col items-center py-3 text-xs font-medium transition-colors ${
               pathname === "/staff/history"
-                ? "text-emerald-600"
+                ? "text-primary-600"
                 : "text-surface-400 hover:text-surface-600"
             }`}
           >

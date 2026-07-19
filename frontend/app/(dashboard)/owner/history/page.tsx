@@ -81,13 +81,13 @@ export default function HistoryPage() {
             placeholder="Search by name or reference..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-surface-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-surface-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
           />
         </div>
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
-          className="px-3 py-2.5 rounded-xl border border-surface-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+          className="px-3 py-2.5 rounded-xl border border-surface-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500/20"
         >
           <option value="all">All</option>
           <option value="verified">Verified</option>
@@ -98,7 +98,7 @@ export default function HistoryPage() {
 
       {loading && page === 0 ? (
         <div className="text-center py-16">
-          <div className="animate-spin w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full mx-auto" />
+          <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full mx-auto" />
         </div>
       ) : filtered.length === 0 ? (
         <Card className="text-center py-16">
@@ -119,7 +119,7 @@ export default function HistoryPage() {
                   <div
                     className={`w-2.5 h-2.5 rounded-full ${
                       v.status === "verified"
-                        ? "bg-emerald-500"
+                        ? "bg-primary-500"
                         : v.status === "scam"
                         ? "bg-red-500"
                         : "bg-amber-500"
@@ -169,7 +169,7 @@ export default function HistoryPage() {
         <div className="text-center">
           <button
             onClick={() => setPage((p) => p + 1)}
-            className="text-sm text-emerald-600 font-medium hover:text-emerald-700"
+            className="text-sm text-primary-600 font-medium hover:text-primary-700"
           >
             Load more
           </button>

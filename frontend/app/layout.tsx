@@ -2,21 +2,21 @@ import type { Metadata, Viewport } from "next";
 import "@/styles/globals.css";
 
 export const metadata: Metadata = {
-  title: "Sure - Bank Transfer Verifier",
+  title: "Surepay - Bank Transfer Verifier",
   description:
     "Verify Ethiopian bank transfer receipts in real-time. Protect your business from payment scams.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Sure",
+    title: "Surepay",
   },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#059669",
+  themeColor: "#115ce9",
 };
 
 export default function RootLayout({

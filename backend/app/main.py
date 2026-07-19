@@ -37,10 +37,10 @@ json_handler.setFormatter(JsonFormatter())
 logging.getLogger().handlers = [json_handler]
 logging.getLogger().setLevel(logging.INFO)
 
-logger = logging.getLogger("sure")
+logger = logging.getLogger("surepay")
 
 app = FastAPI(
-    title="Sure - Bank Transfer Verifier",
+    title="Surepay - Bank Transfer Verifier",
     description="SaaS platform for Ethiopian businesses to verify bank transfer receipts",
     version="1.0.0",
 )
@@ -67,7 +67,7 @@ app.include_router(subscription.router)
 
 @app.api_route("/api/health", methods=["GET", "HEAD"])
 async def health():
-    return {"status": "ok", "service": "Sure API"}
+    return {"status": "ok", "service": "Surepay API"}
 
 
 @app.api_route("/{path:path}", methods=["HEAD"])

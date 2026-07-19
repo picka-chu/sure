@@ -29,7 +29,7 @@ export default function SubscriptionWelcomeModal({ businessName, trialEndDate, d
 
   const steps = [
     {
-      title: `Welcome to Sure, ${businessName}!`,
+      title: `Welcome to Surepay, ${businessName}!`,
       subtitle: "Your 7-day free trial has started. Here's what you can do.",
       icon: Sparkles,
       features: [
@@ -72,17 +72,17 @@ export default function SubscriptionWelcomeModal({ businessName, trialEndDate, d
             <X size={18} />
           </button>
 
-          <div className="bg-gradient-to-br from-emerald-600 to-emerald-700 px-6 pt-8 pb-10 text-center">
+          <div className="bg-gradient-to-br from-primary-600 to-primary-700 px-6 pt-8 pb-10 text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm mb-4">
               <Sparkles size={32} className="text-white" />
             </div>
             <h2 className="text-2xl font-bold text-white">{current.title}</h2>
-            <p className="text-emerald-100 mt-2">{current.subtitle}</p>
+            <p className="text-primary-100 mt-2">{current.subtitle}</p>
 
             {daysRemaining > 0 && (
               <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 backdrop-blur-sm">
-                <Clock size={14} className="text-emerald-200" />
-                <span className="text-sm text-emerald-50 font-medium">{daysRemaining} days remaining in trial</span>
+                <Clock size={14} className="text-primary-200" />
+                <span className="text-sm text-primary-50 font-medium">{daysRemaining} days remaining in trial</span>
               </div>
             )}
           </div>
@@ -90,8 +90,8 @@ export default function SubscriptionWelcomeModal({ businessName, trialEndDate, d
           <div className="p-6 space-y-4">
             {current.features?.map((feature, i) => (
               <div key={i} className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
-                  <feature.icon size={16} className="text-emerald-600" />
+                <div className="w-9 h-9 rounded-xl bg-primary-50 flex items-center justify-center shrink-0">
+                  <feature.icon size={16} className="text-primary-600" />
                 </div>
                 <p className="text-sm text-surface-700">{feature.text}</p>
               </div>
@@ -120,8 +120,8 @@ export default function SubscriptionWelcomeModal({ businessName, trialEndDate, d
         </button>
 
         <div className="px-6 pt-8 pb-6 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-100 mb-4">
-            <CreditCard size={32} className="text-emerald-600" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary-100 mb-4">
+            <CreditCard size={32} className="text-primary-600" />
           </div>
           <h2 className="text-2xl font-bold text-surface-900">{current.title}</h2>
           <p className="text-surface-500 mt-2">{current.subtitle}</p>
@@ -132,11 +132,11 @@ export default function SubscriptionWelcomeModal({ businessName, trialEndDate, d
             <div
               key={i}
               className={`relative p-5 rounded-xl border-2 ${
-                plan.popular ? "border-emerald-500 bg-emerald-50/50" : "border-surface-200"
+                plan.popular ? "border-primary-500 bg-primary-50/50" : "border-surface-200"
               }`}
             >
               {plan.popular && (
-                <span className="absolute -top-2.5 right-4 px-3 py-0.5 rounded-full bg-emerald-600 text-white text-xs font-medium">
+                <span className="absolute -top-2.5 right-4 px-3 py-0.5 rounded-full bg-primary-600 text-white text-xs font-medium">
                   Best Value
                 </span>
               )}
@@ -150,7 +150,7 @@ export default function SubscriptionWelcomeModal({ businessName, trialEndDate, d
               <ul className="space-y-1.5">
                 {plan.features.map((feature, j) => (
                   <li key={j} className="flex items-center gap-2 text-sm text-surface-600">
-                    <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
+                    <CheckCircle2 size={14} className="text-primary-500 shrink-0" />
                     {feature}
                   </li>
                 ))}

@@ -34,7 +34,7 @@ export function getBankColor(bank: string): string {
 
 export function getStatusColor(status: string): string {
   const colors: Record<string, string> = {
-    verified: "bg-emerald-100 text-emerald-800",
+    verified: "bg-primary-100 text-primary-800",
     scam: "bg-red-100 text-red-800",
     pending: "bg-amber-100 text-amber-800",
     failed: "bg-gray-100 text-gray-800",

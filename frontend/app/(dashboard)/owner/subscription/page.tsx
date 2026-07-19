@@ -61,7 +61,7 @@ export default function SubscriptionPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
       </div>
     );
   }
@@ -110,7 +110,7 @@ export default function SubscriptionPage() {
                       Free Trial — {subscription.days_remaining} days remaining
                     </p>
                     <p className="text-sm text-amber-700 mt-1">
-                      Your 7-day trial ends soon. Subscribe to keep using Sure.
+                      Your 7-day trial ends soon. Subscribe to keep using Surepay.
                     </p>
                   </div>
                 </div>
@@ -118,14 +118,14 @@ export default function SubscriptionPage() {
             )}
 
             {isActive && (
-              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100">
+              <div className="p-4 rounded-xl bg-primary-50 border border-primary-100">
                 <div className="flex items-start gap-3">
-                  <CheckCircle2 size={20} className="text-emerald-600 mt-0.5 shrink-0" />
+                  <CheckCircle2 size={20} className="text-primary-600 mt-0.5 shrink-0" />
                   <div>
-                    <p className="font-medium text-emerald-800">
+                    <p className="font-medium text-primary-800">
                       {subscription.plan === "yearly" ? "Yearly" : "Monthly"} Plan — {subscription.days_remaining} days remaining
                     </p>
-                    <p className="text-sm text-emerald-700 mt-1">
+                    <p className="text-sm text-primary-700 mt-1">
                       {subscription.subscription_end_date && `Renews on ${new Date(subscription.subscription_end_date).toLocaleDateString()}`}
                     </p>
                   </div>
@@ -172,7 +172,7 @@ export default function SubscriptionPage() {
           </h2>
           <div className="grid md:grid-cols-2 gap-4">
             {PLANS.map((plan) => (
-              <Card key={plan.plan} className={plan.plan === "yearly" ? "ring-2 ring-emerald-500" : ""}>
+              <Card key={plan.plan} className={plan.plan === "yearly" ? "ring-2 ring-primary-500" : ""}>
                 <div className="space-y-4">
                   {plan.discount_note && (
                     <Badge variant="success" className="mb-2">
@@ -190,7 +190,7 @@ export default function SubscriptionPage() {
                   <ul className="space-y-2">
                     {plan.features.map((feature) => (
                       <li key={feature} className="flex items-center gap-2 text-sm text-surface-600">
-                        <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
+                        <CheckCircle2 size={14} className="text-primary-500 shrink-0" />
                         {feature}
                       </li>
                     ))}

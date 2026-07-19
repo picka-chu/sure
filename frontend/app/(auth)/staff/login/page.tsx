@@ -83,7 +83,7 @@ export default function StaffLoginPage() {
         <div className="text-center pt-2">
           <p className="text-sm text-surface-500">
             Business owner?{" "}
-            <Link href="/login" className="text-emerald-600 font-medium hover:text-emerald-700">
+            <Link href="/login" className="text-primary-600 font-medium hover:text-primary-700">
               Sign in here
             </Link>
           </p>

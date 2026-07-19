@@ -92,13 +92,13 @@ export default function LoginPage() {
         <div className="text-center pt-2 space-y-1">
           <p className="text-sm text-surface-500">
             Don&apos;t have an account?{" "}
-            <Link href="/register" className="text-emerald-600 font-medium hover:text-emerald-700">
+            <Link href="/register" className="text-primary-600 font-medium hover:text-primary-700">
               Register your business
             </Link>
           </p>
           <p className="text-sm text-surface-500">
             Staff?{" "}
-            <Link href="/staff/login" className="text-emerald-600 font-medium hover:text-emerald-700">
+            <Link href="/staff/login" className="text-primary-600 font-medium hover:text-primary-700">
               Login with email & PIN
             </Link>
           </p>

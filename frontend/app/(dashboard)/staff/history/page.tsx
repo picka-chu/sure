@@ -102,14 +102,14 @@ export default function StaffHistoryPage() {
 
       {loading && (
         <div className="text-center py-8">
-          <div className="animate-spin w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full mx-auto" />
+          <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full mx-auto" />
         </div>
       )}
 
       {!loading && verifications.length >= (page + 1) * 20 && (
         <button
           onClick={() => setPage((p) => p + 1)}
-          className="w-full py-3 text-sm text-emerald-600 font-medium hover:text-emerald-700"
+          className="w-full py-3 text-sm text-primary-600 font-medium hover:text-primary-700"
         >
           Load more
         </button>

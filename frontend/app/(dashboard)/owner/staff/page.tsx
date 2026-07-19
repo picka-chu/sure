@@ -139,7 +139,7 @@ export default function StaffManagementPage() {
               />
               {!editingId && !form.email && suggestedEmail && (
                 <p className="text-xs text-surface-400 mt-1.5">
-                  Auto-generated: <span className="font-mono text-emerald-600">{suggestedEmail}</span>
+                  Auto-generated: <span className="font-mono text-primary-600">{suggestedEmail}</span>
                   {" "}&mdash; staff uses this email + PIN to login
                 </p>
               )}
@@ -195,7 +195,7 @@ export default function StaffManagementPage() {
 
       {loading ? (
         <div className="text-center py-16">
-          <div className="animate-spin w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full mx-auto" />
+          <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full mx-auto" />
         </div>
       ) : staff.length === 0 ? (
         <Card className="text-center py-16">
@@ -211,8 +211,8 @@ export default function StaffManagementPage() {
             <Card key={member.id}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                    <span className="text-sm font-medium text-emerald-700">
+                  <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
+                    <span className="text-sm font-medium text-primary-700">
                       {member.full_name.charAt(0).toUpperCase()}
                     </span>
                   </div>
@@ -240,7 +240,7 @@ export default function StaffManagementPage() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => handleEdit(member)}
-                    className="p-2 rounded-lg hover:bg-surface-100 text-surface-400 hover:text-emerald-600"
+                    className="p-2 rounded-lg hover:bg-surface-100 text-surface-400 hover:text-primary-600"
                     aria-label={`Edit ${member.full_name}`}
                   >
                     <Pencil size={16} />

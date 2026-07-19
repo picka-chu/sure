@@ -64,7 +64,7 @@ export default function OwnerDashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full" />
+        <div className="animate-spin w-8 h-8 border-2 border-primary-600 border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -88,7 +88,7 @@ export default function OwnerDashboard() {
       label: "Verified Today",
       value: data.verified_today,
       icon: ShieldCheck,
-      color: "bg-emerald-50 text-emerald-600",
+      color: "bg-primary-50 text-primary-600",
     },
     {
       label: "Scam Detected",
@@ -164,7 +164,7 @@ export default function OwnerDashboard() {
                 <p className={`text-sm mt-1 ${isTrial ? "text-amber-700" : "text-red-700"}`}>
                   {isTrial
                     ? `You have ${subscription.days_remaining} days remaining. Subscribe to keep your business protected.`
-                    : "Your subscription has ended. Renew now to continue using Sure."}
+                    : "Your subscription has ended. Renew now to continue using Surepay."}
                 </p>
                 <div className="mt-3">
                   <span
@@ -225,7 +225,7 @@ export default function OwnerDashboard() {
                   <div
                     className={`w-2 h-2 rounded-full ${
                       v.status === "verified"
-                        ? "bg-emerald-500"
+                        ? "bg-primary-500"
                         : v.status === "scam"
                         ? "bg-red-500"
                         : "bg-amber-500"
@@ -290,7 +290,7 @@ export default function OwnerDashboard() {
                   </div>
                   <div className="h-2 bg-surface-100 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-emerald-500 rounded-full transition-all"
+                      className="h-full bg-primary-500 rounded-full transition-all"
                       style={{ width: `${pct}%` }}
                     />
                   </div>
@@ -325,7 +325,7 @@ export default function OwnerDashboard() {
                   >
                     <div className="flex flex-col items-center gap-0.5">
                       <div
-                        className="w-2.5 rounded-full bg-emerald-500"
+                        className="w-2.5 rounded-full bg-primary-500"
                         style={{ height: height * 0.6 }}
                       />
                       {day.scam > 0 && (

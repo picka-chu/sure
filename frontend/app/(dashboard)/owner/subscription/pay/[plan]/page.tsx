@@ -108,8 +108,8 @@ export default function PayPage() {
     return (
       <div className="max-w-lg mx-auto space-y-6 animate-fade-in">
         <div className="text-center py-12">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-100 mb-6">
-            <CheckCircle2 size={40} className="text-emerald-600" />
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary-100 mb-6">
+            <CheckCircle2 size={40} className="text-primary-600" />
           </div>
           <h1 className="text-2xl font-bold text-surface-900">Payment Submitted!</h1>
           <p className="text-surface-500 mt-2">
@@ -150,19 +150,19 @@ export default function PayPage() {
             onClick={() => setPaymentMethod("cbe")}
             className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
               paymentMethod === "cbe"
-                ? "border-emerald-500 bg-emerald-50"
+                ? "border-primary-500 bg-primary-50"
                 : "border-surface-200 hover:border-surface-300"
             }`}
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                <Building2 size={20} className="text-emerald-700" />
+              <div className="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center">
+                <Building2 size={20} className="text-primary-700" />
               </div>
               <div className="flex-1">
                 <p className="font-medium text-surface-900">CBE Bank Transfer</p>
                 <p className="text-sm text-surface-500">Commercial Bank of Ethiopia</p>
               </div>
-              {paymentMethod === "cbe" && <CheckCircle2 size={20} className="text-emerald-600" />}
+              {paymentMethod === "cbe" && <CheckCircle2 size={20} className="text-primary-600" />}
             </div>
           </button>
 
@@ -170,19 +170,19 @@ export default function PayPage() {
             onClick={() => setPaymentMethod("telebirr")}
             className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
               paymentMethod === "telebirr"
-                ? "border-emerald-500 bg-emerald-50"
+                ? "border-primary-500 bg-primary-50"
                 : "border-surface-200 hover:border-surface-300"
             }`}
           >
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                <Smartphone size={20} className="text-emerald-700" />
+              <div className="w-10 h-10 rounded-lg bg-primary-100 flex items-center justify-center">
+                <Smartphone size={20} className="text-primary-700" />
               </div>
               <div className="flex-1">
                 <p className="font-medium text-surface-900">Telebirr</p>
                 <p className="text-sm text-surface-500">Ethio telecom mobile money</p>
               </div>
-              {paymentMethod === "telebirr" && <CheckCircle2 size={20} className="text-emerald-600" />}
+              {paymentMethod === "telebirr" && <CheckCircle2 size={20} className="text-primary-600" />}
             </div>
           </button>
         </div>
@@ -194,8 +194,8 @@ export default function PayPage() {
             <CardTitle>Step 2: Send Payment</CardTitle>
           </CardHeader>
           <div className="space-y-4">
-            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100">
-              <p className="text-sm font-medium text-emerald-800 mb-3">Send exactly ETB {amount.toLocaleString()} to:</p>
+            <div className="p-4 rounded-xl bg-primary-50 border border-primary-100">
+              <p className="text-sm font-medium text-primary-800 mb-3">Send exactly ETB {amount.toLocaleString()} to:</p>
               <div className="space-y-3">
                 <div className="flex items-center justify-between p-3 rounded-lg bg-white">
                   <div>
@@ -219,7 +219,7 @@ export default function PayPage() {
                     className="p-2 rounded-lg hover:bg-surface-100 text-surface-400 hover:text-surface-600"
                     aria-label="Copy account number"
                   >
-                    {(paymentMethod === "cbe" ? copiedCbe : copiedTele) ? <Check size={16} className="text-emerald-600" /> : <Copy size={16} />}
+                    {(paymentMethod === "cbe" ? copiedCbe : copiedTele) ? <Check size={16} className="text-primary-600" /> : <Copy size={16} />}
                   </button>
                 </div>
               </div>
@@ -232,21 +232,21 @@ export default function PayPage() {
                 placeholder="Your name"
                 value={senderName}
                 onChange={(e) => setSenderName(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-surface-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                className="w-full px-4 py-2.5 rounded-xl border border-surface-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
               />
               <input
                 type="text"
                 placeholder="Your account/phone number"
                 value={senderAccount}
                 onChange={(e) => setSenderAccount(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-surface-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                className="w-full px-4 py-2.5 rounded-xl border border-surface-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
               />
               <input
                 type="text"
                 placeholder="Transaction reference (if available)"
                 value={txRef}
                 onChange={(e) => setTxRef(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-surface-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                className="w-full px-4 py-2.5 rounded-xl border border-surface-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500"
               />
             </div>
           </div>
@@ -260,7 +260,7 @@ export default function PayPage() {
           </CardHeader>
           <div className="space-y-4">
             <label className="block">
-              <div className="flex flex-col items-center justify-center p-8 rounded-xl border-2 border-dashed border-surface-300 hover:border-emerald-400 cursor-pointer transition-colors bg-surface-50">
+              <div className="flex flex-col items-center justify-center p-8 rounded-xl border-2 border-dashed border-surface-300 hover:border-primary-400 cursor-pointer transition-colors bg-surface-50">
                 <Upload size={32} className="text-surface-400 mb-2" />
                 <p className="text-sm font-medium text-surface-600">Click to upload screenshot</p>
                 <p className="text-xs text-surface-400 mt-1">PNG, JPG — Max 5MB</p>

@@ -54,7 +54,7 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
       if (sub.status === "expired" || sub.status === "cancelled") {
         setSubBanner({ type: "error", message: "Your subscription has expired. Renew now to regain access." });
       } else if (sub.status === "trial" && sub.days_remaining <= 2) {
-        setSubBanner({ type: "warning", message: `Your free trial ends in ${sub.days_remaining} days. Subscribe to keep using Sure.` });
+        setSubBanner({ type: "warning", message: `Your free trial ends in ${sub.days_remaining} days. Subscribe to keep using Surepay.` });
       } else if (sub.status === "trial" && sub.days_remaining <= 0) {
         setSubBanner({ type: "error", message: "Your trial has ended. Subscribe to continue using Sure." });
       }
@@ -73,10 +73,10 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
     <div className="min-h-screen bg-surface-50">
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-surface-200 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-emerald-600 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center">
             <ShieldCheck size={18} className="text-white" />
           </div>
-          <span className="font-semibold text-surface-900">Sure</span>
+          <span className="font-semibold text-surface-900">Surepay</span>
         </div>
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -100,11 +100,11 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
         }`}
       >
         <div className="flex items-center gap-2 px-6 py-5 border-b border-surface-100">
-          <div className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center shadow-sm">
+          <div className="w-9 h-9 rounded-xl bg-primary-600 flex items-center justify-center shadow-sm">
             <ShieldCheck size={20} className="text-white" />
           </div>
           <div>
-            <span className="font-bold text-surface-900">Sure</span>
+            <span className="font-bold text-surface-900">Surepay</span>
             <p className="text-xs text-surface-400">Business Dashboard</p>
           </div>
         </div>
@@ -119,7 +119,7 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
                 onClick={() => setSidebarOpen(false)}
                 className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-emerald-50 text-emerald-700"
+                    ? "bg-primary-50 text-primary-700"
                     : "text-surface-600 hover:bg-surface-50 hover:text-surface-900"
                 }`}
               >
@@ -134,8 +134,8 @@ export default function OwnerLayout({ children }: { children: React.ReactNode })
           {user && (
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center">
-                  <span className="text-sm font-medium text-emerald-700">
+                <div className="w-9 h-9 rounded-full bg-primary-100 flex items-center justify-center">
+                  <span className="text-sm font-medium text-primary-700">
                     {user.full_name?.charAt(0)?.toUpperCase()}
                   </span>
                 </div>
