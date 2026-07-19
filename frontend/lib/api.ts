@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from "axios";
 
-function getApiBase(): string {
+export function getApiBase(): string {
   if (typeof window !== "undefined" && (window as any).__API_URL__) {
     return (window as any).__API_URL__;
   }

@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { ShieldCheck, History, LogOut, User, AlertTriangle } from "lucide-react";
-import api from "@/lib/api";
+import api, { getApiBase } from "@/lib/api";
+import axios from "axios";
 
 export default function StaffLayout({ children }: { children: React.ReactNode }) {
   const [staff, setStaff] = useState<any>(null);
@@ -26,7 +27,10 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!ready) return;
-    api.get("/api/subscription/status").then((res) => {
+    const token = localStorage.getItem("staff_token");
+    axios.get(`${getApiBase()}/api/subscription/status`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    }).then((res) => {
       if (res.data.status === "expired" || res.data.status === "cancelled") {
         setSubExpired(true);
       }
