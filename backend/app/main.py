@@ -65,6 +65,11 @@ app.include_router(analytics.router)
 app.include_router(subscription.router)
 
 
-@app.get("/api/health")
+@app.api_route("/api/health", methods=["GET", "HEAD"])
 async def health():
     return {"status": "ok", "service": "Sure API"}
+
+
+@app.api_route("/{path:path}", methods=["HEAD"])
+async def head_catch_all():
+    return ""
