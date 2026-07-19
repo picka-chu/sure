@@ -51,8 +51,8 @@ export default function SubscriptionPage() {
     try {
       const res = await subscriptionApi.getStatus();
       setSubscription(res.data);
-    } catch {
-      setError("Failed to load subscription status");
+    } catch (err: any) {
+      setError(err.response?.data?.detail || err.message || "Failed to load subscription status");
     } finally {
       setLoading(false);
     }
