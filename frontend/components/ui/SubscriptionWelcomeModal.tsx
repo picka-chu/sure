@@ -88,7 +88,7 @@ export default function SubscriptionWelcomeModal({ businessName, trialEndDate, d
           </div>
 
           <div className="p-6 space-y-4">
-            {current.features.map((feature, i) => (
+            {current.features?.map((feature, i) => (
               <div key={i} className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
                   <feature.icon size={16} className="text-emerald-600" />

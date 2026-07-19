@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Building2, Pencil, Trash2, ChevronDown } from "lucide-react";
+import { Plus, Building2, Pencil, Trash2, ChevronDown, AlertTriangle } from "lucide-react";
 import { banksApi } from "@/lib/api";
 import { BankAccount, SupportedBank } from "@/lib/types";
 import { Card, CardHeader, CardTitle } from "@/components/ui/Card";
