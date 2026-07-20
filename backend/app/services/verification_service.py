@@ -226,26 +226,131 @@ async def extract_text_from_image(image_path: str) -> Optional[str]:
         return None
 
 
+_receipt_cache: dict = {}
 GEMINI_MODEL = "gemini-3.5-flash"
+_http_client: Optional[httpx.AsyncClient] = None
 
-RECEIPT_PROMPT = """You are a receipt analyst for Ethiopian banks. Extract the following details as JSON from this receipt. Return ONLY valid JSON, no markdown, no explanation.
 
-Fields:
-- bank_name: one of "cbe", "dashen", "awash", "boa", "zemen", "telebirr"
-- transaction_reference: the FT number or transaction ID (e.g. FT25211G11JQ)
-- amount: numeric value (number, not string)
-- currency: "ETB" by default
-- payer_name: the sender's name
-- payer_account: the sender's account number
-- receiver_name: the recipient's name
-- receiver_account: the recipient's account number
+def _get_client():
+    global _http_client
+    if _http_client is None:
+        _http_client = httpx.AsyncClient(verify=False, timeout=10, limits=httpx.Limits(max_keepalive_connections=5))
+    return _http_client
+
+
+def _parse_table_html(html: str) -> dict:
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(html, "lxml")
+    data = {}
+    for table in soup.find_all("table"):
+        for row in table.find_all("tr"):
+            cells = row.find_all(["td", "th"])
+            if len(cells) >= 2:
+                key = cells[0].get_text(strip=True).lower().replace(" ", "_").replace(":", "")
+                val = cells[1].get_text(strip=True)
+                data[key] = val
+    for p in soup.find_all("p"):
+        t = p.get_text(strip=True)
+        if ":" in t:
+            k, v = t.split(":", 1)
+            data[k.strip().lower().replace(" ", "_")] = v.strip()
+    return data
+
+
+def _parse_receipt_html(html: str) -> Optional[dict]:
+    raw = _parse_table_html(html)
+
+    def g(*keys):
+        for k in keys:
+            v = raw.get(k)
+            if v:
+                return v
+        return None
+
+    result = {}
+
+    bank_map = {
+        "cbe": ["cbe", "commercial bank of ethiopia", "commercial_bank_of_ethiopia"],
+        "dashen": ["dashen", "dashen bank", "dashen_bank"],
+        "awash": ["awash", "awash bank", "awash_bank"],
+        "boa": ["boa", "bank of abyssinia", "bank_of_abyssinia"],
+        "zemen": ["zemen", "zemen bank", "zemen_bank"],
+        "telebirr": ["telebirr", "ethio telecom", "ethio_telecom"],
+    }
+    page_text = html.lower()
+    for short, names in bank_map.items():
+        if any(n in page_text for n in names):
+            result["bank_name"] = short
+            break
+
+    ref = g("ft_reference", "ft_ref", "transaction_reference", "reference", "transaction_id", "trx", "id")
+    if ref:
+        m = re.search(r"(FT[a-zA-Z0-9]+)", ref)
+        if m:
+            ref = m.group(1)
+        result["transaction_reference"] = ref
+
+    amt_str = g("amount", "trx_amt", "transaction_amount", "total", "amount_etb", "amount_etb ")
+    if amt_str:
+        m = re.search(r"([\d,]+\.?\d*)", amt_str.replace(",", ""))
+        if m:
+            result["amount"] = float(m.group(1))
+
+    result["currency"] = g("currency") or "ETB"
+    payer = g("from_account_name", "sender_name", "payer_name", "from", "sender", "debit_account_name")
+    if payer:
+        result["payer_name"] = payer
+    payer_acct = g("from_account", "sender_account", "payer_account", "debit_account", "from_account_no")
+    if payer_acct:
+        result["payer_account"] = payer_acct
+    receiver = g("to_account_name", "receiver_name", "beneficiary_name", "to", "credit_account_name")
+    if receiver:
+        result["receiver_name"] = receiver
+    receiver_acct = g("to_account", "receiver_account", "beneficiary_account", "credit_account", "to_account_no")
+    if receiver_acct:
+        result["receiver_account"] = receiver_acct
+    date_str = g("date", "transaction_date", "trx_date", "value_date", "posting_date")
+    if date_str:
+        result["date"] = date_str
+
+    if not result.get("receiver_account") and not result.get("amount"):
+        return None
+    return result
+
+
+async def extract_from_url(url: str) -> Optional[dict]:
+    if url in _receipt_cache:
+        return _receipt_cache[url]
+    try:
+        client = _get_client()
+        resp = await client.get(url, follow_redirects=True)
+        if resp.status_code != 200:
+            return None
+        html = resp.text
+        parsed = _parse_receipt_html(html)
+        if parsed:
+            _receipt_cache[url] = parsed
+            return parsed
+        return None
+    except Exception:
+        return None
+
+
+GEMINI_PROMPT = """Extract these fields as JSON from the receipt content. Return ONLY valid JSON.
+- bank_name: "cbe", "dashen", "awash", "boa", "zemen", or "telebirr"
+- transaction_reference: the FT number
+- amount: number
+- currency: "ETB"
+- payer_name: sender name
+- payer_account: sender account
+- receiver_name: recipient name
+- receiver_account: recipient account
 - date: transaction date
 
-Example:
 {"bank_name": "cbe", "transaction_reference": "FT25211G11JQ", "amount": 1250.75, "currency": "ETB", "payer_name": "John Doe", "payer_account": "1000223344", "receiver_name": "Sunshine Cafe PLC", "receiver_account": "1000135792", "date": "2024-01-15"}"""
 
 
-async def _gemini_call(contents: list) -> Optional[dict]:
+async def _gemini_parse(content: str) -> Optional[dict]:
     if not settings.GEMINI_API_KEY:
         return None
     from google import genai
@@ -253,14 +358,14 @@ async def _gemini_call(contents: list) -> Optional[dict]:
     client = genai.Client(api_key=settings.GEMINI_API_KEY)
     for attempt in range(5):
         try:
-            response = client.models.generate_content(model=GEMINI_MODEL, contents=contents)
-            text = response.text.strip()
+            resp = client.models.generate_content(model=GEMINI_MODEL, contents=[GEMINI_PROMPT + "\n\n" + content[:15000]])
+            text = resp.text.strip()
             if text.startswith("```"):
                 text = text.split("\n", 1)[-1]
                 text = text.rsplit("```", 1)[0]
             import json
-            data = json.loads(text.strip())
-            return data if isinstance(data, dict) else None
+            d = json.loads(text.strip())
+            return d if isinstance(d, dict) else None
         except errors.ClientError as e:
             if e.code == 429:
                 import asyncio
@@ -272,36 +377,57 @@ async def _gemini_call(contents: list) -> Optional[dict]:
     return None
 
 
-async def fetch_receipt_page(url: str) -> Optional[str]:
-    try:
-        async with httpx.AsyncClient(verify=False, timeout=15) as client:
-            resp = await client.get(url, follow_redirects=True)
-            if resp.status_code == 200:
-                ct = resp.headers.get("content-type", "")
-                if "pdf" in ct:
-                    return f"[PDF receipt from {url}]"
-                return resp.text
-    except Exception:
-        return None
-    return None
-
-
 async def extract_with_gemini(image_path: str) -> Optional[dict]:
+    qr_data = await extract_qr_from_image(image_path)
+
+    if qr_data and qr_data.startswith("http"):
+        result = await extract_from_url(qr_data)
+        if result:
+            return result
+        html = await _fetch_url(qr_data)
+        if html:
+            result = await _gemini_parse(html)
+            if result:
+                return result
+
     mime_type, _ = mimetypes.guess_type(image_path)
     if not mime_type or not mime_type.startswith("image/"):
         mime_type = "image/png"
     with open(image_path, "rb") as f:
-        image_bytes = f.read()
+        img = f.read()
+    if not settings.GEMINI_API_KEY:
+        return None
+    from google import genai
+    from google.genai import errors
+    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    for attempt in range(5):
+        try:
+            resp = client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=[GEMINI_PROMPT, {"inline_data": {"mime_type": mime_type, "data": img}}],
+            )
+            text = resp.text.strip()
+            if text.startswith("```"):
+                text = text.split("\n", 1)[-1]
+                text = text.rsplit("```", 1)[0]
+            import json
+            d = json.loads(text.strip())
+            return d if isinstance(d, dict) else None
+        except errors.ClientError as e:
+            if e.code == 429:
+                import asyncio
+                await asyncio.sleep(2 ** attempt)
+                continue
+            return None
+        except Exception:
+            return None
+    return None
 
-    qr_data = await extract_qr_from_image(image_path)
-    receipt_html = None
-    if qr_data and qr_data.startswith("http"):
-        receipt_html = await fetch_receipt_page(qr_data)
 
-    if receipt_html:
-        return await _gemini_call([RECEIPT_PROMPT + "\n\nReceipt page content:\n" + receipt_html[:10000]])
-
-    return await _gemini_call([
-        RECEIPT_PROMPT,
-        {"inline_data": {"mime_type": mime_type, "data": image_bytes}},
-    ])
+async def _fetch_url(url: str) -> Optional[str]:
+    try:
+        client = _get_client()
+        resp = await client.get(url, follow_redirects=True)
+        return resp.text if resp.status_code == 200 else None
+    except Exception:
+        return None
