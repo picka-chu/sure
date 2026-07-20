@@ -44,23 +44,20 @@ export default function StaffPage() {
     await processImage(file);
   };
 
-  const handleCameraCapture = async () => {
-    if (cameraActive) {
-      stopCamera();
-      return;
-    }
-    setCameraActive(true);
+  const startCamera = async () => {
+    setCapturing(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment" },
       });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        videoRef.current.play();
+        await videoRef.current.play();
+        setCameraActive(true);
       }
     } catch {
-      fileInputRef.current?.click();
       setCameraActive(false);
+      fileInputRef.current?.click();
     }
   };
 
@@ -71,6 +68,7 @@ export default function StaffPage() {
       videoRef.current.srcObject = null;
     }
     setCameraActive(false);
+    setCapturing(false);
   }, []);
 
   const captureFromCamera = useCallback(() => {
@@ -180,44 +178,47 @@ export default function StaffPage() {
       )}
 
       {capturing ? (
-        <div className="relative aspect-[3/4] bg-black rounded-2xl overflow-hidden">
+        <div className="relative aspect-[3/4] bg-black rounded-[3px] overflow-hidden">
           <video
             ref={videoRef}
             className="w-full h-full object-cover"
             playsInline
             autoPlay
           />
-          <div className="absolute inset-0 camera-overlay flex items-center justify-center">
-            <div className="w-64 h-64 border-2 border-white/50 rounded-2xl" />
-          </div>
-          <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-4">
-            <button
-              onClick={captureFromCamera}
-              className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-lg"
-            >
-              <div className="w-14 h-14 rounded-full border-4 border-surface-900" />
-            </button>
-          </div>
-          <button
-            onClick={stopCamera}
-            className="absolute top-4 right-4 text-white/70 hover:text-white"
-            aria-label="Close camera"
-          >
-            <XCircle size={24} />
+          {cameraActive && (
+            <>
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="w-64 h-64 border-2 border-white/40" />
+              </div>
+              <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-4">
+                <button onClick={captureFromCamera} className="w-16 h-16 rounded-full bg-white flex items-center justify-center shadow-lg hover:scale-105 transition-transform">
+                  <div className="w-14 h-14 rounded-full border-4 border-[#37352f]" />
+                </button>
+              </div>
+            </>
+          )}
+          {!cameraActive && (
+            <div className="absolute inset-0 flex items-center justify-center bg-[#f7f7f7]">
+              <p className="text-[#9b9a97] text-sm">Unable to access camera</p>
+            </div>
+          )}
+          <button onClick={stopCamera} className="absolute top-3 right-3 text-white/70 hover:text-white" aria-label="Close camera">
+            <XCircle size={22} />
           </button>
         </div>
       ) : (
-        <div
-          onClick={() => setCapturing(true)}
-          className="relative aspect-[3/4] bg-gradient-to-br from-primary-50 to-primary-100 rounded-2xl border-2 border-dashed border-primary-200 flex flex-col items-center justify-center cursor-pointer hover:border-primary-400 transition-colors"
-        >
-          <div className="w-20 h-20 rounded-full bg-primary-100 flex items-center justify-center mb-4">
-            <Camera size={36} className="text-primary-600" />
-          </div>
-          <p className="text-lg font-medium text-primary-700">Tap to Capture</p>
-          <p className="text-sm text-primary-500 mt-1">
-            Take photo of success dialog
-          </p>
+        <div className="space-y-3">
+          <button onClick={startCamera} className="w-full aspect-[3/4] bg-[#f7f7f7] border-2 border-dashed border-[#e9e9e7] rounded-[3px] flex flex-col items-center justify-center hover:border-[#115ce9] transition-colors">
+            <div className="w-14 h-14 rounded-full bg-[#115ce9]/10 flex items-center justify-center mb-3">
+              <Camera size={28} className="text-[#115ce9]" />
+            </div>
+            <p className="text-[15px] font-medium text-[#37352f]">Open Camera</p>
+            <p className="text-[13px] text-[#9b9a97] mt-1">Take photo of receipt</p>
+          </button>
+          <button onClick={() => fileInputRef.current?.click()} className="w-full py-3 border border-[#e9e9e7] rounded-[3px] text-[14px] text-[#37352f] hover:bg-[#e9e9e7] transition-colors flex items-center justify-center gap-2">
+            <Scan size={16} />
+            Upload Image from Gallery
+          </button>
         </div>
       )}
 
@@ -225,7 +226,6 @@ export default function StaffPage() {
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         className="hidden"
         onChange={handleFileCapture}
       />
