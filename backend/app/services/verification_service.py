@@ -268,23 +268,35 @@ async def extract_with_gemini(image_path: str) -> Optional[dict]:
         logger.info(f"[extract_with_gemini] No GEMINI_API_KEY configured — skipping")
         return None
     logger.info(f"[extract_with_gemini] Sending image to Gemini for extraction")
-    try:
-        from google import genai
-        client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        from PIL import Image
-        img = Image.open(image_path)
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=[GEMINI_EXTRACTION_PROMPT, img],
-        )
-        text = response.text.strip()
-        text = text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-        data = json.loads(text)
-        if isinstance(data, dict) and data.get("transaction_reference"):
-            logger.info(f"[extract_with_gemini] Success — bank={data.get('bank_name')}, ref={data.get('transaction_reference')}, receiver={data.get('receiver_name')}({data.get('receiver_account')}), amount={data.get('amount')}")
-            return data
-        logger.warning(f"[extract_with_gemini] Gemini returned no transaction_reference: {data}")
-        return None
-    except Exception as e:
-        logger.error(f"[extract_with_gemini] Exception: {e}")
-        return None
+    max_retries = 3
+    for attempt in range(1, max_retries + 1):
+        try:
+            from google import genai
+            client = genai.Client(api_key=settings.GEMINI_API_KEY)
+            from PIL import Image
+            img = Image.open(image_path)
+            response = client.models.generate_content(
+                model="gemini-3.5-flash",
+                contents=[GEMINI_EXTRACTION_PROMPT, img],
+            )
+            text = response.text.strip()
+            text = text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+            data = json.loads(text)
+            if isinstance(data, dict) and data.get("transaction_reference"):
+                logger.info(f"[extract_with_gemini] Success — bank={data.get('bank_name')}, ref={data.get('transaction_reference')}, receiver={data.get('receiver_name')}({data.get('receiver_account')}), amount={data.get('amount')}")
+                return data
+            logger.warning(f"[extract_with_gemini] Gemini returned no transaction_reference: {data}")
+            return None
+        except Exception as e:
+            err_str = str(e)
+            if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str:
+                import asyncio
+                delay_match = re.search(r"retry in (\d+\.?\d*)s", err_str)
+                delay = float(delay_match.group(1)) if delay_match else min(15 * attempt, 60)
+                if attempt < max_retries:
+                    logger.warning(f"[extract_with_gemini] Rate limited (attempt {attempt}/{max_retries}), retrying in {delay:.0f}s")
+                    await asyncio.sleep(delay)
+                    continue
+            logger.error(f"[extract_with_gemini] Exception: {e}")
+            return None
+    return None
