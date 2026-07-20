@@ -243,39 +243,62 @@ Example response:
 {"bank_name": "cbe", "transaction_reference": "FT25211G11JQ", "amount": 1250.75, "currency": "ETB", "payer_name": "John Doe", "payer_account": "1000223344", "receiver_name": "Sunshine Cafe PLC", "receiver_account": "1000135792", "date": "2024-01-15"}"""
 
 
+GEMINI_MODELS = [
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-1.5-flash",
+    "gemini-1.5-pro",
+]
+
+
 async def extract_with_gemini(image_path: str) -> Optional[dict]:
     if not settings.GEMINI_API_KEY:
         return None
-    try:
-        from google import genai
+    from google import genai
+    from google.genai import errors
 
-        client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    client = genai.Client(api_key=settings.GEMINI_API_KEY)
 
-        mime_type, _ = mimetypes.guess_type(image_path)
-        if not mime_type or not mime_type.startswith("image/"):
-            mime_type = "image/png"
+    mime_type, _ = mimetypes.guess_type(image_path)
+    if not mime_type or not mime_type.startswith("image/"):
+        mime_type = "image/png"
 
-        with open(image_path, "rb") as f:
-            image_bytes = f.read()
+    with open(image_path, "rb") as f:
+        image_bytes = f.read()
 
-        response = client.models.generate_content(
-            model="gemini-2.0-flash",
-            contents=[
-                GEMINI_EXTRACT_PROMPT,
-                {"inline_data": {"mime_type": mime_type, "data": image_bytes}},
-            ],
-        )
+    last_error = None
+    for model in GEMINI_MODELS:
+        for attempt in range(3):
+            try:
+                response = client.models.generate_content(
+                    model=model,
+                    contents=[
+                        GEMINI_EXTRACT_PROMPT,
+                        {"inline_data": {"mime_type": mime_type, "data": image_bytes}},
+                    ],
+                )
 
-        text = response.text.strip()
-        if text.startswith("```"):
-            text = text.split("\n", 1)[-1]
-            text = text.rsplit("```", 1)[0]
-        text = text.strip()
+                text = response.text.strip()
+                if text.startswith("```"):
+                    text = text.split("\n", 1)[-1]
+                    text = text.rsplit("```", 1)[0]
+                text = text.strip()
 
-        import json
-        data = json.loads(text)
-        if isinstance(data, dict):
-            return data
-        return None
-    except Exception:
-        return None
+                import json
+                data = json.loads(text)
+                if isinstance(data, dict):
+                    return data
+                return None
+            except errors.ClientError as e:
+                if e.code == 429:
+                    last_error = e
+                    import asyncio
+                    await asyncio.sleep(2 ** attempt)
+                    continue
+                last_error = e
+                break
+            except Exception as e:
+                last_error = e
+                break
+
+    return None
