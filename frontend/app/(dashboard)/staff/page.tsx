@@ -324,62 +324,52 @@ function ResultScreen({
         </p>
       </div>
 
-      <Card className="space-y-3">
-        {v.bank_name && (
-          <div className="flex justify-between">
-            <span className="text-surface-500">Bank</span>
-            <span className="font-medium capitalize">{v.bank_name}</span>
-          </div>
-        )}
-        {v.amount != null && (
-          <div className="flex justify-between">
-            <span className="text-surface-500">Amount</span>
-            <span className="font-bold text-lg">
-              {formatCurrency(v.amount, v.currency)}
-            </span>
-          </div>
-        )}
-        {v.payer_name && (
-          <div className="flex justify-between">
-            <span className="text-surface-500">Payer</span>
-            <span className="font-medium">{v.payer_name}</span>
-          </div>
-        )}
-        {v.receiver_name && (
-          <div className="flex justify-between">
-            <span className="text-surface-500">Receiver</span>
-            <span className="font-medium">{v.receiver_name}</span>
-          </div>
-        )}
-        {v.transaction_reference && (
-          <div className="flex justify-between">
-            <span className="text-surface-500">Reference</span>
-            <span className="font-medium text-xs">{v.transaction_reference}</span>
-          </div>
-        )}
+      {result.reason && (
+        <div className={`p-3 rounded-[3px] text-[13px] leading-relaxed ${
+          isVerified ? "bg-[#e6f7e6] text-[#1a7d1a]" : "bg-[#fde7e5] text-[#c73c3c]"
+        }`}>
+          {result.reason}
+        </div>
+      )}
+
+      <Card className="space-y-2.5">
+        <p className="text-[11px] font-semibold text-[#9b9a97] uppercase tracking-wider">Receipt Details</p>
         <div className="flex justify-between">
-          <span className="text-surface-500">Status</span>
-          <Badge
-            variant={
-              v.status === "verified"
-                ? "success"
-                : v.status === "scam"
-                ? "danger"
-                : "warning"
-            }
-          >
+          <span className="text-[#787774] text-[14px]">Bank</span>
+          <span className="font-medium text-[#37352f] text-[14px] capitalize">{v.bank_name || "—"}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-[#787774] text-[14px]">Reference</span>
+          <span className="font-medium text-[#37352f] text-[14px]">{v.transaction_reference || "—"}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-[#787774] text-[14px]">Amount</span>
+          <span className="font-bold text-[#37352f] text-[16px]">{v.amount != null ? formatCurrency(v.amount, v.currency) : "—"}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-[#787774] text-[14px]">Payer</span>
+          <span className="font-medium text-[#37352f] text-[14px]">{v.payer_name || "—"}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-[#787774] text-[14px]">Payer Account</span>
+          <span className="font-medium text-[#37352f] text-[14px]">{v.payer_account || "—"}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-[#787774] text-[14px]">Receiver</span>
+          <span className="font-medium text-[#37352f] text-[14px]">{v.receiver_name || "—"}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-[#787774] text-[14px]">Receiver Account</span>
+          <span className="font-medium text-[#37352f] text-[14px]">{v.receiver_account || "—"}</span>
+        </div>
+        <div className="border-t border-[#e9e9e7] pt-2.5 mt-2.5 flex justify-between">
+          <span className="text-[#787774] text-[14px]">Status</span>
+          <Badge variant={v.status === "verified" ? "success" : v.status === "scam" ? "danger" : "warning"}>
             {v.status}
           </Badge>
         </div>
-        {result.reason && (
-          <div className={`p-3 rounded-[3px] text-[13px] ${
-            isVerified ? "bg-[#e6f7e6] text-[#1a7d1a]" : "bg-[#fde7e5] text-[#c73c3c]"
-          }`}>
-            {result.reason}
-          </div>
-        )}
         {v.error_message && (
-          <div className="p-3 rounded-[3px] bg-[#fde7e5] text-[13px] text-[#c73c3c]">
+          <div className="p-2.5 rounded bg-[#fde7e5] text-[12px] text-[#c73c3c] mt-1">
             {v.error_message}
           </div>
         )}
