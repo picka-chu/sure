@@ -243,7 +243,7 @@ Example response:
 {"bank_name": "cbe", "transaction_reference": "FT25211G11JQ", "amount": 1250.75, "currency": "ETB", "payer_name": "John Doe", "payer_account": "1000223344", "receiver_name": "Sunshine Cafe PLC", "receiver_account": "1000135792", "date": "2024-01-15"}"""
 
 
-GEMINI_MODEL = "gemini-2.5-flash"
+GEMINI_MODEL = "gemini-3.5-flash"
 
 
 async def extract_with_gemini(image_path: str) -> Optional[dict]:
