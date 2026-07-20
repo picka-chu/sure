@@ -49,7 +49,7 @@ async def verify_by_link(
         db.add(verification)
         await db.flush()
         await db.refresh(verification)
-        return _build_response(verification, False, False)
+        return _build_response(verification, False, False, reason=f"Bank API error: {result.get('error', 'unknown')}")
 
     data = result["data"]
     bank_accounts = await db.execute(
@@ -68,6 +68,15 @@ async def verify_by_link(
 
     is_verified = data.get("status") == "SUCCESS" and matches
     status_enum = VerificationStatus.VERIFIED if is_verified else VerificationStatus.SCAM
+
+    ref_reason = None
+    expected_acct = next((acct.account_number for acct in accounts if acct.bank_name.value == bank_name), None)
+    if is_verified:
+        ref_reason = f"Transaction confirmed by {data.get('bank_name', bank_name)}. Receiver account matches your registered business account."
+    elif data.get("status") != "SUCCESS":
+        ref_reason = f"Bank returned non-success status: {data.get('status', 'unknown')}. This transaction could not be confirmed."
+    else:
+        ref_reason = f"Bank confirmed the transaction but the receiver does not match your business. Expected: {expected_acct or 'N/A'}, got: {data.get('receiver_name', 'unknown')} ({data.get('receiver_account', 'unknown')})."
 
     verification = Verification(
         business_id=current_user.business_id,
@@ -91,7 +100,7 @@ async def verify_by_link(
     db.add(verification)
     await db.flush()
     await db.refresh(verification)
-    return _build_response(verification, is_verified, matches)
+    return _build_response(verification, is_verified, matches, reason=ref_reason)
 
 
 @router.post("/capture", response_model=VerifyCaptureResponse)
@@ -159,7 +168,7 @@ async def verify_by_capture(
         db.add(verification)
         await db.flush()
         await db.refresh(verification)
-        return _build_response(verification, False, False)
+        return _build_response(verification, False, False, reason="Could not identify the bank from the image. Select the bank manually before capturing or try a clearer photo.")
 
     if not ref:
         if qr_data:
@@ -179,7 +188,7 @@ async def verify_by_capture(
         db.add(verification)
         await db.flush()
         await db.refresh(verification)
-        return _build_response(verification, False, False)
+        return _build_response(verification, False, False, reason="Could not read the transaction reference from the image. Enter the FT/reference number manually before capturing.")
 
     acct_number = None
     for acct in accounts_list:
@@ -203,7 +212,7 @@ async def verify_by_capture(
         db.add(verification)
         await db.flush()
         await db.refresh(verification)
-        return _build_response(verification, False, False)
+        return _build_response(verification, False, False, reason=f"Bank verification failed: {result.get('error', 'unknown')}")
 
     data = result["data"]
     matches = any(
