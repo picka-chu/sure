@@ -12,7 +12,7 @@ from app.models.business import Business
 from app.models.bank import BankAccount, BankName
 from app.models.verification import Verification, VerificationStatus
 from app.schemas.verification import VerificationResponse, VerifyCaptureResponse
-from app.services.verification_service import verify_receipt, detect_bank_from_url, detect_bank_from_text, extract_reference_from_url, extract_ft_number, extract_qr_from_image, extract_text_from_image
+from app.services.verification_service import verify_receipt, detect_bank_from_url, detect_bank_from_text, extract_reference_from_url, extract_ft_number, extract_qr_from_image, extract_text_from_image, extract_with_gemini
 from typing import List, Optional
 from app.config import settings
 
@@ -98,6 +98,7 @@ async def verify_by_link(
 async def verify_by_capture(
     file: UploadFile = File(...),
     bank_name: Optional[str] = Form(None),
+    reference: Optional[str] = Form(None),
     current_user = Depends(get_current_any),
     db: AsyncSession = Depends(get_db),
 ):
@@ -130,11 +131,23 @@ async def verify_by_capture(
         for a in accounts
     ]
 
-    qr_data = await extract_qr_from_image(file_path)
-    text_data = await extract_text_from_image(file_path)
-    combined = f"{qr_data or ''} {text_data or ''}"
+    gemini_data = await extract_with_gemini(file_path)
 
-    bank = bank_name or detect_bank_from_url(combined) or detect_bank_from_text(combined)
+    if gemini_data:
+        bank = bank_name or gemini_data.get("bank_name")
+        ref = reference or gemini_data.get("transaction_reference")
+    else:
+        bank = bank_name
+        ref = reference
+
+    if not bank or not ref:
+        qr_data = await extract_qr_from_image(file_path)
+        text_data = await extract_text_from_image(file_path)
+        combined = f"{qr_data or ''} {text_data or ''}"
+
+    if not bank:
+        bank = detect_bank_from_url(combined) or detect_bank_from_text(combined)
+
     if not bank:
         verification = Verification(
             business_id=business_id,
@@ -148,13 +161,13 @@ async def verify_by_capture(
         await db.refresh(verification)
         return _build_response(verification, False, False)
 
-    reference = None
-    if qr_data:
-        reference = extract_reference_from_url(qr_data, bank)
-    if not reference:
-        reference = extract_ft_number(combined)
+    if not ref:
+        if qr_data:
+            ref = extract_reference_from_url(qr_data, bank)
+        if not ref:
+            ref = extract_ft_number(combined)
 
-    if not reference:
+    if not ref:
         verification = Verification(
             business_id=business_id,
             staff_id=staff_id,
@@ -174,14 +187,14 @@ async def verify_by_capture(
             acct_number = acct["account_number"]
             break
 
-    result = await verify_receipt(bank, reference, acct_number)
+    result = await verify_receipt(bank, ref, acct_number)
 
     if not result["success"]:
         verification = Verification(
             business_id=business_id,
             staff_id=staff_id,
             bank_name=bank,
-            transaction_reference=reference,
+            transaction_reference=ref,
             status=VerificationStatus.FAILED,
             screenshot_path=file_path,
             error_message=result.get("error"),

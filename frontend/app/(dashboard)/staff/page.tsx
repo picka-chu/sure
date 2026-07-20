@@ -27,6 +27,7 @@ export default function StaffPage() {
   });
   const [selectedBank, setSelectedBank] = useState("");
   const [bankOpen, setBankOpen] = useState(false);
+  const [manualRef, setManualRef] = useState("");
   const [capturing, setCapturing] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<VerifyResult | null>(null);
@@ -104,7 +105,7 @@ export default function StaffPage() {
     setProcessing(true);
     setCapturing(false);
     try {
-      const res = await verificationApi.capture(file, selectedBank || undefined);
+      const res = await verificationApi.capture(file, selectedBank || undefined, manualRef || undefined);
       setResult(res.data);
       setShowResult(true);
       loadStats();
@@ -220,6 +221,13 @@ export default function StaffPage() {
         </div>
       ) : (
         <div className="space-y-3">
+          <input
+            type="text"
+            value={manualRef}
+            onChange={(e) => setManualRef(e.target.value)}
+            placeholder="Transaction reference (optional) — e.g. FT25211G11JQ"
+            className="w-full px-3 py-2.5 border border-[#e9e9e7] rounded-[3px] text-[14px] text-[#37352f] placeholder:text-[#9b9a97] focus:outline-none focus:border-[#115ce9]"
+          />
           <div className="relative">
             <button onClick={() => setBankOpen(!bankOpen)} className="w-full flex items-center justify-between px-3 py-2.5 border border-[#e9e9e7] rounded-[3px] text-[14px] text-left bg-white hover:bg-[#f7f7f7] transition-colors">
               <span className={selectedBank ? "text-[#37352f]" : "text-[#9b9a97]"}>{BANKS.find(b => b.value === selectedBank)?.label || "Select bank (optional)"}</span>

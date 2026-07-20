@@ -104,10 +104,11 @@ export const verificationApi = {
     api.post("/api/verifications/verify-link", data, {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
     }),
-  capture: (file: File, bank_name?: string) => {
+  capture: (file: File, bank_name?: string, reference?: string) => {
     const formData = new FormData();
     formData.append("file", file);
     if (bank_name) formData.append("bank_name", bank_name);
+    if (reference) formData.append("reference", reference);
     return api.post("/api/verifications/capture", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });

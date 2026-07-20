@@ -4,6 +4,9 @@ import json
 from datetime import datetime, timezone
 from typing import Optional
 from urllib.parse import urlparse, parse_qs
+import base64
+import mimetypes
+from app.config import settings
 
 BANK_CONFIGS = {
     "cbe": {
@@ -218,6 +221,61 @@ async def extract_text_from_image(image_path: str) -> Optional[str]:
         text = pytesseract.image_to_string(Image.open(image_path))
         return text.strip() if text.strip() else None
     except ImportError:
+        return None
+    except Exception:
+        return None
+
+
+GEMINI_EXTRACT_PROMPT = """You are a receipt OCR assistant for Ethiopian banks. Analyze this receipt image and extract the following details as JSON. Return ONLY valid JSON, no markdown, no explanation.
+
+Fields to extract:
+- bank_name: one of "cbe", "dashen", "awash", "boa", "zemen", "telebirr" (or null if unknown)
+- transaction_reference: the FT number or transaction ID (e.g. FT25211G11JQ)
+- amount: numeric value (number, not string)
+- currency: "ETB" by default
+- payer_name: the sender's name (or null)
+- payer_account: the sender's account number (or null)
+- receiver_name: the recipient's name (or null)
+- receiver_account: the recipient's account number (or null)
+- date: transaction date if visible (or null)
+
+Example response:
+{"bank_name": "cbe", "transaction_reference": "FT25211G11JQ", "amount": 1250.75, "currency": "ETB", "payer_name": "John Doe", "payer_account": "1000223344", "receiver_name": "Sunshine Cafe PLC", "receiver_account": "1000135792", "date": "2024-01-15"}"""
+
+
+async def extract_with_gemini(image_path: str) -> Optional[dict]:
+    if not settings.GEMINI_API_KEY:
+        return None
+    try:
+        from google import genai
+
+        client = genai.Client(api_key=settings.GEMINI_API_KEY)
+
+        mime_type, _ = mimetypes.guess_type(image_path)
+        if not mime_type or not mime_type.startswith("image/"):
+            mime_type = "image/png"
+
+        with open(image_path, "rb") as f:
+            image_bytes = f.read()
+
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=[
+                GEMINI_EXTRACT_PROMPT,
+                {"inline_data": {"mime_type": mime_type, "data": image_bytes}},
+            ],
+        )
+
+        text = response.text.strip()
+        if text.startswith("```"):
+            text = text.split("\n", 1)[-1]
+            text = text.rsplit("```", 1)[0]
+        text = text.strip()
+
+        import json
+        data = json.loads(text)
+        if isinstance(data, dict):
+            return data
         return None
     except Exception:
         return None

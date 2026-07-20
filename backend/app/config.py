@@ -32,6 +32,7 @@ class Settings:
     )
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
     STRIPE_API_KEY: Optional[str] = os.getenv("STRIPE_API_KEY")
+    GEMINI_API_KEY: Optional[str] = os.getenv("GEMINI_API_KEY")
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
     UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "./uploads")
     PRICING_MONTHLY_AMOUNT: float = float(os.getenv("PRICING_MONTHLY_AMOUNT", "750"))
