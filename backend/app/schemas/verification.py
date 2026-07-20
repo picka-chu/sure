@@ -39,3 +39,4 @@ class VerifyCaptureResponse(BaseModel):
     verification: VerificationResponse
     is_verified: bool
     matches_business_account: bool
+    reason: Optional[str] = None

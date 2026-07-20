@@ -74,6 +74,7 @@ export interface VerifyResult {
   verification: Verification;
   is_verified: boolean;
   matches_business_account: boolean;
+  reason?: string;
 }
 
 export interface DashboardData {

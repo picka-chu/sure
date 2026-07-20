@@ -371,8 +371,15 @@ function ResultScreen({
             {v.status}
           </Badge>
         </div>
+        {result.reason && (
+          <div className={`p-3 rounded-[3px] text-[13px] ${
+            isVerified ? "bg-[#e6f7e6] text-[#1a7d1a]" : "bg-[#fde7e5] text-[#c73c3c]"
+          }`}>
+            {result.reason}
+          </div>
+        )}
         {v.error_message && (
-          <div className="p-3 rounded-xl bg-amber-50 text-sm text-amber-800">
+          <div className="p-3 rounded-[3px] bg-[#fde7e5] text-[13px] text-[#c73c3c]">
             {v.error_message}
           </div>
         )}

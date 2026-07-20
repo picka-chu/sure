@@ -215,6 +215,17 @@ async def verify_by_capture(
     is_verified = data.get("status") == "SUCCESS" and matches
     status_enum = VerificationStatus.VERIFIED if is_verified else VerificationStatus.SCAM
 
+    expected_acct = next((acct.account_number for acct in accounts if acct.bank_name.value == bank), None)
+    reason = None
+    if is_verified:
+        reason = f"Transaction confirmed by {data.get('bank_name', bank)}. Receiver account matches your registered business account."
+    elif data.get("status") != "SUCCESS":
+        reason = f"Bank returned non-success status: {data.get('status', 'unknown')}. This transaction could not be confirmed."
+    else:
+        actual_receiver = data.get("receiver_name", "unknown")
+        actual_account = data.get("receiver_account", "unknown")
+        reason = f"Bank confirmed the transaction but the receiver does not match your business. Expected receiver account: {expected_acct or 'N/A'}, but the payment was sent to {actual_receiver} ({actual_account})."
+
     verification = Verification(
         business_id=business_id,
         staff_id=staff_id,
@@ -336,7 +347,7 @@ async def get_verification(
     return verification
 
 
-def _build_response(verification: Verification, is_verified: bool, matches: bool) -> dict:
+def _build_response(verification: Verification, is_verified: bool, matches: bool, reason: Optional[str] = None) -> dict:
     return {
         "verification": {
             "id": str(verification.id),
@@ -361,4 +372,5 @@ def _build_response(verification: Verification, is_verified: bool, matches: bool
         },
         "is_verified": is_verified,
         "matches_business_account": matches,
+        "reason": reason,
     }
