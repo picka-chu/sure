@@ -2,12 +2,22 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, CheckCircle, XCircle, Loader2, Scan, ShieldCheck } from "lucide-react";
+import { Camera, CheckCircle, XCircle, Loader2, Scan, ShieldCheck, ChevronDown } from "lucide-react";
 import { verificationApi } from "@/lib/api";
 import { StaffTodayStats, VerifyResult } from "@/lib/types";
 import { cn, formatCurrency } from "@/lib/utils";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
+
+const BANKS = [
+  { value: "", label: "Auto-detect from image" },
+  { value: "cbe", label: "Commercial Bank of Ethiopia" },
+  { value: "dashen", label: "Dashen Bank" },
+  { value: "awash", label: "Awash Bank" },
+  { value: "boa", label: "Bank of Abyssinia" },
+  { value: "zemen", label: "Zemen Bank" },
+  { value: "telebirr", label: "Telebirr" },
+];
 
 export default function StaffPage() {
   const [stats, setStats] = useState<StaffTodayStats>({
@@ -15,6 +25,8 @@ export default function StaffPage() {
     verified: 0,
     scam: 0,
   });
+  const [selectedBank, setSelectedBank] = useState("");
+  const [bankOpen, setBankOpen] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<VerifyResult | null>(null);
@@ -92,7 +104,7 @@ export default function StaffPage() {
     setProcessing(true);
     setCapturing(false);
     try {
-      const res = await verificationApi.capture(file);
+      const res = await verificationApi.capture(file, selectedBank || undefined);
       setResult(res.data);
       setShowResult(true);
       loadStats();
@@ -208,6 +220,21 @@ export default function StaffPage() {
         </div>
       ) : (
         <div className="space-y-3">
+          <div className="relative">
+            <button onClick={() => setBankOpen(!bankOpen)} className="w-full flex items-center justify-between px-3 py-2.5 border border-[#e9e9e7] rounded-[3px] text-[14px] text-left bg-white hover:bg-[#f7f7f7] transition-colors">
+              <span className={selectedBank ? "text-[#37352f]" : "text-[#9b9a97]"}>{BANKS.find(b => b.value === selectedBank)?.label || "Select bank (optional)"}</span>
+              <ChevronDown size={16} className={`text-[#9b9a97] transition-transform ${bankOpen ? "rotate-180" : ""}`} />
+            </button>
+            {bankOpen && (
+              <div className="absolute z-10 top-full mt-1 left-0 right-0 bg-white border border-[#e9e9e7] rounded-[3px] shadow-lg overflow-hidden">
+                {BANKS.map((b) => (
+                  <button key={b.value} onClick={() => { setSelectedBank(b.value); setBankOpen(false); }} className={`w-full text-left px-3 py-2 text-[14px] hover:bg-[#f7f7f7] transition-colors ${selectedBank === b.value ? "bg-[#115ce9]/5 text-[#115ce9]" : "text-[#37352f]"}`}>
+                    {b.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <button onClick={startCamera} className="w-full aspect-[3/4] bg-[#f7f7f7] border-2 border-dashed border-[#e9e9e7] rounded-[3px] flex flex-col items-center justify-center hover:border-[#115ce9] transition-colors">
             <div className="w-14 h-14 rounded-full bg-[#115ce9]/10 flex items-center justify-center mb-3">
               <Camera size={28} className="text-[#115ce9]" />

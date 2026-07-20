@@ -97,6 +97,7 @@ async def verify_by_link(
 @router.post("/capture", response_model=VerifyCaptureResponse)
 async def verify_by_capture(
     file: UploadFile = File(...),
+    bank_name: Optional[str] = Form(None),
     current_user = Depends(get_current_any),
     db: AsyncSession = Depends(get_db),
 ):
@@ -133,7 +134,7 @@ async def verify_by_capture(
     text_data = await extract_text_from_image(file_path)
     combined = f"{qr_data or ''} {text_data or ''}"
 
-    bank = detect_bank_from_url(combined) or detect_bank_from_text(combined)
+    bank = bank_name or detect_bank_from_url(combined) or detect_bank_from_text(combined)
     if not bank:
         verification = Verification(
             business_id=business_id,
