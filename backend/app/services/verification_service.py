@@ -226,62 +226,41 @@ async def extract_text_from_image(image_path: str) -> Optional[str]:
         return None
 
 
-GEMINI_EXTRACT_PROMPT = """You are a receipt OCR assistant for Ethiopian banks. Analyze this receipt image and extract the following details as JSON. Return ONLY valid JSON, no markdown, no explanation.
+GEMINI_MODEL = "gemini-3.5-flash"
 
-Fields to extract:
-- bank_name: one of "cbe", "dashen", "awash", "boa", "zemen", "telebirr" (or null if unknown)
+RECEIPT_PROMPT = """You are a receipt analyst for Ethiopian banks. Extract the following details as JSON from this receipt. Return ONLY valid JSON, no markdown, no explanation.
+
+Fields:
+- bank_name: one of "cbe", "dashen", "awash", "boa", "zemen", "telebirr"
 - transaction_reference: the FT number or transaction ID (e.g. FT25211G11JQ)
 - amount: numeric value (number, not string)
 - currency: "ETB" by default
-- payer_name: the sender's name (or null)
-- payer_account: the sender's account number (or null)
-- receiver_name: the recipient's name (or null)
-- receiver_account: the recipient's account number (or null)
-- date: transaction date if visible (or null)
+- payer_name: the sender's name
+- payer_account: the sender's account number
+- receiver_name: the recipient's name
+- receiver_account: the recipient's account number
+- date: transaction date
 
-Example response:
+Example:
 {"bank_name": "cbe", "transaction_reference": "FT25211G11JQ", "amount": 1250.75, "currency": "ETB", "payer_name": "John Doe", "payer_account": "1000223344", "receiver_name": "Sunshine Cafe PLC", "receiver_account": "1000135792", "date": "2024-01-15"}"""
 
 
-GEMINI_MODEL = "gemini-3.5-flash"
-
-
-async def extract_with_gemini(image_path: str) -> Optional[dict]:
+async def _gemini_call(contents: list) -> Optional[dict]:
     if not settings.GEMINI_API_KEY:
         return None
     from google import genai
     from google.genai import errors
-
     client = genai.Client(api_key=settings.GEMINI_API_KEY)
-
-    mime_type, _ = mimetypes.guess_type(image_path)
-    if not mime_type or not mime_type.startswith("image/"):
-        mime_type = "image/png"
-
-    with open(image_path, "rb") as f:
-        image_bytes = f.read()
-
     for attempt in range(5):
         try:
-            response = client.models.generate_content(
-                model=GEMINI_MODEL,
-                contents=[
-                    GEMINI_EXTRACT_PROMPT,
-                    {"inline_data": {"mime_type": mime_type, "data": image_bytes}},
-                ],
-            )
-
+            response = client.models.generate_content(model=GEMINI_MODEL, contents=contents)
             text = response.text.strip()
             if text.startswith("```"):
                 text = text.split("\n", 1)[-1]
                 text = text.rsplit("```", 1)[0]
-            text = text.strip()
-
             import json
-            data = json.loads(text)
-            if isinstance(data, dict):
-                return data
-            return None
+            data = json.loads(text.strip())
+            return data if isinstance(data, dict) else None
         except errors.ClientError as e:
             if e.code == 429:
                 import asyncio
@@ -290,5 +269,39 @@ async def extract_with_gemini(image_path: str) -> Optional[dict]:
             return None
         except Exception:
             return None
-
     return None
+
+
+async def fetch_receipt_page(url: str) -> Optional[str]:
+    try:
+        async with httpx.AsyncClient(verify=False, timeout=15) as client:
+            resp = await client.get(url, follow_redirects=True)
+            if resp.status_code == 200:
+                ct = resp.headers.get("content-type", "")
+                if "pdf" in ct:
+                    return f"[PDF receipt from {url}]"
+                return resp.text
+    except Exception:
+        return None
+    return None
+
+
+async def extract_with_gemini(image_path: str) -> Optional[dict]:
+    mime_type, _ = mimetypes.guess_type(image_path)
+    if not mime_type or not mime_type.startswith("image/"):
+        mime_type = "image/png"
+    with open(image_path, "rb") as f:
+        image_bytes = f.read()
+
+    qr_data = await extract_qr_from_image(image_path)
+    receipt_html = None
+    if qr_data and qr_data.startswith("http"):
+        receipt_html = await fetch_receipt_page(qr_data)
+
+    if receipt_html:
+        return await _gemini_call([RECEIPT_PROMPT + "\n\nReceipt page content:\n" + receipt_html[:10000]])
+
+    return await _gemini_call([
+        RECEIPT_PROMPT,
+        {"inline_data": {"mime_type": mime_type, "data": image_bytes}},
+    ])
