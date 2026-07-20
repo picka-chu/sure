@@ -57,7 +57,12 @@ export default function RegisterPage() {
       localStorage.setItem("show_welcome_trial", "true");
       router.push("/owner");
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Registration failed");
+      const detail = err.response?.data?.detail;
+      if (Array.isArray(detail)) {
+        setError(detail.map((d: any) => d.msg).join(". "));
+      } else {
+        setError(detail || "Registration failed");
+      }
     } finally {
       setLoading(false);
     }
