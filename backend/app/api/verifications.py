@@ -1,5 +1,6 @@
 import os
 import uuid
+import logging
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,9 +13,11 @@ from app.models.business import Business
 from app.models.bank import BankAccount, BankName
 from app.models.verification import Verification, VerificationStatus
 from app.schemas.verification import VerificationResponse, VerifyCaptureResponse
-from app.services.verification_service import verify_receipt, detect_bank_from_url, detect_bank_from_text, extract_reference_from_url, extract_ft_number, extract_qr_from_image, extract_text_from_image, extract_with_gemini
+from app.services.verification_service import verify_receipt, detect_bank_from_url, detect_bank_from_text, extract_ft_number, extract_qr_from_image, extract_text_from_image, fetch_receipt_from_url, extract_with_gemini
 from typing import List, Optional
 from app.config import settings
+
+logger = logging.getLogger("surepay.verify")
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "bmp", "webp"}
 ALLOWED_MIME_PREFIXES = {"image/"}
@@ -140,55 +143,69 @@ async def verify_by_capture(
         for a in accounts
     ]
 
-    gemini_data = await extract_with_gemini(file_path)
+    bank = bank_name
+    ref = reference
+    logger.info(f"[capture] Starting verification — business={business_id}, staff={staff_id}, manual_bank={bank_name}, manual_ref={reference}")
 
-    if gemini_data:
-        bank = bank_name or gemini_data.get("bank_name")
-        ref = reference or gemini_data.get("transaction_reference")
+    qr_data = await extract_qr_from_image(file_path)
+    text_data = await extract_text_from_image(file_path)
+    combined = f"{qr_data or ''} {text_data or ''}"
+    logger.info(f"[capture] QR from image: {qr_data or 'none'}")
+    logger.info(f"[capture] OCR text: {text_data[:200] if text_data else 'none'}")
+
+    if qr_data and qr_data.startswith("http"):
+        logger.info(f"[capture] QR is a URL — fetching receipt page")
+        receipt_data = await fetch_receipt_from_url(qr_data)
+        if receipt_data:
+            logger.info(f"[capture] Receipt fetched from URL successfully — bank={receipt_data.get('bank_name')}, ref={receipt_data.get('reference') or receipt_data.get('transaction_reference')}")
+            return await _handle_receipt_data(receipt_data, qr_data, accounts, accounts_list, business_id, staff_id, file_path, bank, ref, db)
+        logger.warning(f"[capture] Failed to fetch receipt from QR URL — falling through")
+
+    if qr_data and not qr_data.startswith("http"):
+        ref_val = extract_ft_number(qr_data)
+        if ref_val:
+            ref = ref or ref_val
+            logger.info(f"[capture] Extracted FT number from QR: {ref}")
+        else:
+            logger.info(f"[capture] QR data (non-URL) but no FT number found: {qr_data[:100]}")
     else:
-        bank = bank_name
-        ref = reference
+        ref_val = extract_ft_number(combined)
+        if ref_val:
+            ref = ref or ref_val
+            logger.info(f"[capture] Extracted FT number from OCR text: {ref}")
+        else:
+            logger.info(f"[capture] No FT number found in OCR text")
+
+    detected_bank = detect_bank_from_url(combined) or detect_bank_from_text(combined)
+    if detected_bank:
+        bank = bank or detected_bank
+        logger.info(f"[capture] Bank detected from image: {bank}")
+    else:
+        logger.info(f"[capture] Bank not detectable from image")
 
     if not bank or not ref:
-        qr_data = await extract_qr_from_image(file_path)
-        text_data = await extract_text_from_image(file_path)
-        combined = f"{qr_data or ''} {text_data or ''}"
-
-    if not bank:
-        bank = detect_bank_from_url(combined) or detect_bank_from_text(combined)
-
-    if not bank:
-        verification = Verification(
-            business_id=business_id,
-            staff_id=staff_id,
-            status=VerificationStatus.FAILED,
-            screenshot_path=file_path,
-            error_message="Could not detect bank from image",
-        )
-        db.add(verification)
-        await db.flush()
-        await db.refresh(verification)
-        return _build_response(verification, False, False, reason="Could not identify the bank from the image. Select the bank manually before capturing or try a clearer photo.")
+        logger.info(f"[capture] Missing bank or ref — trying Gemini fallback on image")
+        gemini_data = await extract_with_gemini(file_path)
+        if gemini_data:
+            logger.info(f"[capture] Gemini extracted — bank={gemini_data.get('bank_name')}, ref={gemini_data.get('transaction_reference')}, receiver={gemini_data.get('receiver_name')}")
+            return await _handle_gemini_fallback(gemini_data, accounts, business_id, staff_id, file_path, db)
+        logger.warning(f"[capture] Gemini extraction also failed — no fallback data")
 
     if not ref:
-        if qr_data:
-            ref = extract_reference_from_url(qr_data, bank)
-        if not ref:
-            ref = extract_ft_number(combined)
-
-    if not ref:
-        verification = Verification(
-            business_id=business_id,
-            staff_id=staff_id,
-            bank_name=bank,
-            status=VerificationStatus.FAILED,
-            screenshot_path=file_path,
-            error_message="Could not extract transaction reference from image",
-        )
+        logger.warning(f"[capture] No reference extracted — returning error to user")
+        verification = _create_failed_verification(business_id, staff_id, file_path, "Could not extract transaction reference from image", bank=bank)
         db.add(verification)
         await db.flush()
         await db.refresh(verification)
         return _build_response(verification, False, False, reason="Could not read the transaction reference from the image. Enter the FT/reference number manually before capturing.")
+
+    if not bank:
+        logger.warning(f"[capture] No bank detected — returning error to user")
+        verification = _create_failed_verification(business_id, staff_id, file_path, "Could not detect bank from image")
+        db.add(verification)
+        await db.flush()
+        await db.refresh(verification)
+        return _build_response(verification, False, False, reason="Could not identify the bank from the image. Select the bank manually before capturing or try a clearer photo.")
 
     acct_number = None
     for acct in accounts_list:
@@ -196,54 +213,107 @@ async def verify_by_capture(
             acct_number = acct["account_number"]
             break
 
+    logger.info(f"[capture] Calling verify_receipt — bank={bank}, ref={ref}, account_last8={acct_number[-8:] if acct_number else 'none'}")
     result = await verify_receipt(bank, ref, acct_number)
+    logger.info(f"[capture] verify_receipt result — success={result['success']}, error={result.get('error', 'none')}")
 
     if not result["success"]:
-        verification = Verification(
-            business_id=business_id,
-            staff_id=staff_id,
-            bank_name=bank,
-            transaction_reference=ref,
-            status=VerificationStatus.FAILED,
-            screenshot_path=file_path,
-            error_message=result.get("error"),
-            verification_data=result,
-        )
+        logger.info(f"[capture] Library extraction failed — trying Gemini fallback on image")
+        gemini_data = await extract_with_gemini(file_path)
+        if gemini_data:
+            logger.info(f"[capture] Gemini extracted — bank={gemini_data.get('bank_name')}, ref={gemini_data.get('transaction_reference')}, receiver={gemini_data.get('receiver_name')}")
+            return await _handle_gemini_fallback(gemini_data, accounts, business_id, staff_id, file_path, db)
+        logger.warning(f"[capture] All extraction methods failed — returning error")
+        verification = _create_failed_verification(business_id, staff_id, file_path, result.get("error", "Bank verification failed"), bank=bank, ref=ref, data=result)
         db.add(verification)
         await db.flush()
         await db.refresh(verification)
         return _build_response(verification, False, False, reason=f"Bank verification failed: {result.get('error', 'unknown')}")
 
     data = result["data"]
+    logger.info(f"[capture] Verification data — payer={data.get('payer_name')}, receiver={data.get('receiver_name')}({data.get('receiver_account')}), amount={data.get('amount')}, status={data.get('status')}")
+    return await _process_result(data, bank, accounts, business_id, staff_id, file_path, ref, db)
+
+
+async def _handle_receipt_data(data: dict, receipt_url: str, accounts: list, accounts_list: list, business_id, staff_id, file_path, bank_name, ref, db):
+    bank = bank_name or data.get("bank_name") or detect_bank_from_url(receipt_url) or detect_bank_from_text(json.dumps(data))
+    txn_ref = ref or data.get("reference") or data.get("transaction_reference")
+    logger.info(f"[handle_receipt] bank={bank}, ref={txn_ref}, matching {len(accounts)} business accounts")
     matches = any(
         acct.account_number == data.get("receiver_account") or
         acct.account_holder_name.lower() in data.get("receiver_name", "").lower()
         for acct in accounts
     )
+    status = data.get("status")
+    is_verified = matches if status is None else (status == "SUCCESS" and matches)
+    status_enum = VerificationStatus.VERIFIED if is_verified else VerificationStatus.SCAM
+    expected = next((a.account_number for a in accounts if a.bank_name.value == (bank or "unknown")), None) if accounts else None
+    if is_verified:
+        reason = f"Transaction confirmed by {data.get('bank_name', bank or 'bank')}. Receiver account matches your registered business account."
+    elif status is not None and status != "SUCCESS":
+        reason = f"Bank returned non-success status: {status}. This transaction could not be confirmed."
+    else:
+        reason = f"Bank confirmed the transaction but the receiver does not match your business. Expected: {expected or 'N/A'}, got: {data.get('receiver_name', 'unknown')} ({data.get('receiver_account', 'unknown')})."
+    verification = Verification(
+        business_id=business_id,
+        staff_id=staff_id,
+        bank_name=bank or "unknown",
+        bank_account_id=next((a.id for a in accounts if a.account_number == data.get("receiver_account")), None),
+        transaction_reference=txn_ref or receipt_url,
+        payer_name=data.get("payer_name"),
+        payer_account=data.get("payer_account"),
+        receiver_name=data.get("receiver_name"),
+        receiver_account=data.get("receiver_account"),
+        amount=data.get("amount"),
+        currency=data.get("currency", "ETB"),
+        status=status_enum,
+        screenshot_path=file_path,
+        receipt_url=receipt_url,
+        verification_data=data,
+        verified_at=datetime.now(timezone.utc),
+    )
+    logger.info(f"[handle_receipt] Result — is_verified={is_verified}, matches_business={matches}, reason={reason[:80]}")
+    db.add(verification)
+    await db.flush()
+    await db.refresh(verification)
+    return _build_response(verification, is_verified, matches, reason=reason)
 
+
+def _create_failed_verification(business_id, staff_id, file_path, error, bank=None, ref=None, data=None):
+    return Verification(
+        business_id=business_id,
+        staff_id=staff_id,
+        bank_name=bank,
+        transaction_reference=ref,
+        status=VerificationStatus.FAILED,
+        screenshot_path=file_path,
+        error_message=error,
+        verification_data=data,
+    )
+
+
+async def _process_result(data: dict, bank: str, accounts: list, business_id, staff_id, file_path, ref, db):
+    matches = any(
+        acct.account_number == data.get("receiver_account") or
+        acct.account_holder_name.lower() in data.get("receiver_name", "").lower()
+        for acct in accounts
+    )
     is_verified = data.get("status") == "SUCCESS" and matches
     status_enum = VerificationStatus.VERIFIED if is_verified else VerificationStatus.SCAM
-
-    expected_acct = next((acct.account_number for acct in accounts if acct.bank_name.value == bank), None)
-    reason = None
+    expected = next((a.account_number for a in accounts if a.bank_name.value == bank), None)
+    logger.info(f"[process_result] bank={bank}, receiver={data.get('receiver_name')}({data.get('receiver_account')}), matches_business={matches}, is_verified={is_verified}")
     if is_verified:
         reason = f"Transaction confirmed by {data.get('bank_name', bank)}. Receiver account matches your registered business account."
     elif data.get("status") != "SUCCESS":
         reason = f"Bank returned non-success status: {data.get('status', 'unknown')}. This transaction could not be confirmed."
     else:
-        actual_receiver = data.get("receiver_name", "unknown")
-        actual_account = data.get("receiver_account", "unknown")
-        reason = f"Bank confirmed the transaction but the receiver does not match your business. Expected receiver account: {expected_acct or 'N/A'}, but the payment was sent to {actual_receiver} ({actual_account})."
-
+        reason = f"Bank confirmed the transaction but the receiver does not match your business. Expected receiver account: {expected or 'N/A'}, but the payment was sent to {data.get('receiver_name', 'unknown')} ({data.get('receiver_account', 'unknown')})."
     verification = Verification(
         business_id=business_id,
         staff_id=staff_id,
         bank_name=bank,
-        bank_account_id=next(
-            (acct.id for acct in accounts if acct.account_number == data.get("receiver_account")),
-            None,
-        ),
-        transaction_reference=data.get("reference", reference),
+        bank_account_id=next((a.id for a in accounts if a.account_number == data.get("receiver_account")), None),
+        transaction_reference=data.get("reference", ref),
         payer_name=data.get("payer_name"),
         payer_account=data.get("payer_account"),
         receiver_name=data.get("receiver_name"),
@@ -258,7 +328,52 @@ async def verify_by_capture(
     db.add(verification)
     await db.flush()
     await db.refresh(verification)
-    return _build_response(verification, is_verified, matches)
+    return _build_response(verification, is_verified, matches, reason=reason)
+
+
+async def _handle_gemini_fallback(data: dict, accounts: list, business_id, staff_id, file_path, db):
+    bank = data.get("bank_name")
+    ref = data.get("transaction_reference")
+    logger.info(f"[gemini_fallback] Processing Gemini data — bank={bank}, ref={ref}, receiver={data.get('receiver_name')}({data.get('receiver_account')}), amount={data.get('amount')}")
+    matches = any(
+        acct.account_number == data.get("receiver_account") or
+        acct.account_holder_name.lower() in data.get("receiver_name", "").lower()
+        for acct in accounts
+    )
+    status = data.get("status")
+    is_verified = matches if status is None else (status == "SUCCESS" and matches)
+    status_enum = VerificationStatus.VERIFIED if is_verified else VerificationStatus.SCAM
+    expected = next((a.account_number for a in accounts if a.bank_name.value.lower() in (bank or "").lower()), None) if accounts else None
+    if is_verified:
+        reason = f"Transaction confirmed (AI-extracted). Receiver account matches your registered business account."
+    elif status is not None and status != "SUCCESS":
+        reason = f"Receipt shows non-success status: {status}."
+    else:
+        actual_receiver = data.get("receiver_name", "unknown")
+        actual_account = data.get("receiver_account", "unknown")
+        reason = f"AI extracted receipt data but the receiver does not match your business. Expected: {expected or 'N/A'}, got: {actual_receiver} ({actual_account})."
+    verification = Verification(
+        business_id=business_id,
+        staff_id=staff_id,
+        bank_name=bank or "unknown",
+        bank_account_id=next((a.id for a in accounts if a.account_number == data.get("receiver_account")), None),
+        transaction_reference=ref,
+        payer_name=data.get("payer_name"),
+        payer_account=data.get("payer_account"),
+        receiver_name=data.get("receiver_name"),
+        receiver_account=data.get("receiver_account"),
+        amount=data.get("amount"),
+        currency=data.get("currency", "ETB"),
+        status=status_enum,
+        screenshot_path=file_path,
+        verification_data={"source": "gemini_fallback", **data},
+        verified_at=datetime.now(timezone.utc),
+    )
+    logger.info(f"[gemini_fallback] Result — is_verified={is_verified}, matches_business={matches}, reason={reason[:80]}")
+    db.add(verification)
+    await db.flush()
+    await db.refresh(verification)
+    return _build_response(verification, is_verified, matches, reason=reason)
 
 
 @router.get("", response_model=List[VerificationResponse])

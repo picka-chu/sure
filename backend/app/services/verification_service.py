@@ -1,44 +1,43 @@
 import httpx
 import re
 import json
-from datetime import datetime, timezone
+import logging
 from typing import Optional
 from urllib.parse import urlparse, parse_qs
-import base64
-import mimetypes
 from app.config import settings
 
-BANK_CONFIGS = {
+logger = logging.getLogger("surepay.verify.service")
+
+BANK_RECEIPT_URLS = {
     "cbe": {
         "name": "Commercial Bank of Ethiopia",
-        "receipt_pattern": r"https://apps\.cbe\.com\.et:100/\?id=(FT[a-zA-Z0-9]+)",
-        "ft_pattern": r"FT[a-zA-Z0-9]+",
-        "verify_url": "https://apps.cbe.com.et:100/",
+        "url_template": "https://apps.cbe.com.et:100/?id={ref}",
+        "url_regex": r"https://apps\.cbe\.com\.et:100/\?id=(FT[a-zA-Z0-9]+)",
     },
     "dashen": {
         "name": "Dashen Bank",
-        "receipt_pattern": r"https://receipt\.dashensuperapp\.com/receipt/([a-zA-Z0-9]+)",
-        "verify_url": "https://receipt.dashensuperapp.com/receipt/",
+        "url_template": "https://receipt.dashensuperapp.com/receipt/{ref}",
+        "url_regex": r"https://receipt\.dashensuperapp\.com/receipt/([a-zA-Z0-9]+)",
     },
     "awash": {
         "name": "Awash Bank",
-        "receipt_pattern": r"https://awashpay\.awashbank\.com:8225/([a-zA-Z0-9\-]+)",
-        "verify_url": "https://awashpay.awashbank.com:8225/",
+        "url_template": "https://awashpay.awashbank.com:8225/{ref}",
+        "url_regex": r"https://awashpay\.awashbank\.com:8225/([a-zA-Z0-9\-]+)",
     },
     "boa": {
         "name": "Bank of Abyssinia",
-        "receipt_pattern": r"https://cs\.bankofabyssinia\.com/slip/\?trx=([a-zA-Z0-9]+)",
-        "verify_url": "https://cs.bankofabyssinia.com/slip/",
+        "url_template": "https://cs.bankofabyssinia.com/slip/?trx={ref}",
+        "url_regex": r"https://cs\.bankofabyssinia\.com/slip/\?trx=([a-zA-Z0-9]+)",
     },
     "zemen": {
         "name": "Zemen Bank",
-        "receipt_pattern": r"https://share\.zemenbank\.com/rt/([a-zA-Z0-9]+)/pdf",
-        "verify_url": "https://share.zemenbank.com/rt/",
+        "url_template": "https://share.zemenbank.com/rt/{ref}/pdf",
+        "url_regex": r"https://share\.zemenbank\.com/rt/([a-zA-Z0-9]+)/pdf",
     },
     "telebirr": {
         "name": "Telebirr (Ethio telecom)",
-        "receipt_pattern": r"https://transactioninfo\.ethiotelecom\.et/receipt/([a-zA-Z0-9]+)",
-        "verify_url": "https://transactioninfo.ethiotelecom.et/receipt/",
+        "url_template": "https://transactioninfo.ethiotelecom.et/receipt/{ref}",
+        "url_regex": r"https://transactioninfo\.ethiotelecom\.et/receipt/([a-zA-Z0-9]+)",
     },
 }
 
@@ -51,11 +50,20 @@ BANK_SHORT_NAMES = {
     "telebirr": "telebirr", "ethio telecom": "telebirr",
 }
 
+BANK_URL_PATTERNS = [
+    (r"apps\.cbe\.com\.et", "cbe"),
+    (r"receipt\.dashensuperapp\.com", "dashen"),
+    (r"awashpay\.awashbank\.com", "awash"),
+    (r"cs\.bankofabyssinia\.com", "boa"),
+    (r"share\.zemenbank\.com", "zemen"),
+    (r"transactioninfo\.ethiotelecom\.et", "telebirr"),
+]
+
 
 def detect_bank_from_url(url: str) -> Optional[str]:
-    for key, config in BANK_CONFIGS.items():
-        if re.search(config["receipt_pattern"], url):
-            return key
+    for pattern, bank in BANK_URL_PATTERNS:
+        if re.search(pattern, url):
+            return bank
     return None
 
 
@@ -68,10 +76,10 @@ def detect_bank_from_text(text: str) -> Optional[str]:
 
 
 def extract_reference_from_url(url: str, bank: str) -> Optional[str]:
-    config = BANK_CONFIGS.get(bank)
+    config = BANK_RECEIPT_URLS.get(bank)
     if not config:
         return None
-    match = re.search(config.get("receipt_pattern", ""), url)
+    match = re.search(config["url_regex"], url)
     if match:
         return match.group(1)
     if bank == "cbe":
@@ -84,133 +92,118 @@ def extract_reference_from_url(url: str, bank: str) -> Optional[str]:
 
 
 def extract_ft_number(text: str) -> Optional[str]:
-    match = re.search(r"FT[a-zA-Z0-9]+", text)
-    return match.group(0) if match else None
+    match = re.search(r"FT[a-zA-Z0-9]+", text, re.IGNORECASE)
+    return match.group(0).upper() if match else None
+
+
+def build_receipt_url(bank: str, reference: str) -> str:
+    config = BANK_RECEIPT_URLS.get(bank)
+    if not config:
+        return reference
+    return config["url_template"].format(ref=reference)
+
+
+def is_url(s: str) -> bool:
+    return s.startswith("http://") or s.startswith("https://")
+
+
+async def _extract_boa_receipt(url: str) -> dict:
+    logger.info(f"[_extract_boa_receipt] Fetching BOA receipt: {url}")
+    try:
+        from bs4 import BeautifulSoup
+        async with httpx.AsyncClient(verify=False, timeout=15, follow_redirects=True) as client:
+            resp = await client.get(url)
+            resp.raise_for_status()
+        logger.info(f"[_extract_boa_receipt] HTTP {resp.status_code}, size={len(resp.text)}")
+        soup = BeautifulSoup(resp.text, "html.parser")
+        data = {}
+        for row in soup.select("table tr"):
+            cells = row.find_all("td")
+            if len(cells) == 2:
+                key = cells[0].text.strip().rstrip(":")
+                value = cells[1].text.strip()
+                data[key] = value
+        result = {
+            "status": "SUCCESS",
+            "bank_name": "Bank of Abyssinia",
+            "payer_name": data.get("Source Account Name"),
+            "payer_account": data.get("Source Account"),
+            "receiver_name": data.get("Receiver's Name"),
+            "receiver_account": data.get("Receiver's Account"),
+            "amount": data.get("Transferred Amount"),
+            "reference": data.get("Transaction Reference"),
+            "raw": data,
+        }
+        logger.info(f"[_extract_boa_receipt] Parsed — receiver={result['receiver_name']}({result['receiver_account']}), amount={result['amount']}")
+        return result
+    except Exception as e:
+        logger.error(f"[_extract_boa_receipt] Failed: {e}")
+        return {"status": "ERROR", "error": str(e)}
 
 
 async def verify_receipt(bank: str, reference: str, account_number: Optional[str] = None) -> dict:
+    logger.info(f"[verify_receipt] Starting — bank={bank}, ref={reference[:30] if reference else 'none'}, is_url={is_url(reference) if reference else False}")
+
+    if is_url(reference) and bank == "boa":
+        logger.info(f"[verify_receipt] Using direct BOA HTTP extractor (no Selenium)")
+        data = await _extract_boa_receipt(reference)
+        if data.get("status") == "ERROR":
+            logger.error(f"[verify_receipt] BOA extraction failed: {data.get('error')}")
+            return {"success": False, "error": data.get("error", "BOA extraction failed")}
+        logger.info(f"[verify_receipt] BOA extractor succeeded — receiver={data.get('receiver_name')}, amount={data.get('amount')}")
+        return {"success": True, "data": data}
+
     try:
         from ethiobank_receipts import extract_receipt
-        if bank == "cbe" and account_number:
-            from ethiobank_receipts.extractors.cbe import extract_cbe_receipt_info_from_ft
-            if reference.startswith("FT") or reference.startswith("ft"):
-                data = extract_cbe_receipt_info_from_ft(reference, account_number[-8:])
-            else:
-                data = extract_receipt(bank, reference)
-        else:
+
+        if is_url(reference):
+            logger.info(f"[verify_receipt] Calling ethiobank_receipts.extract_receipt(bank={bank}, url=...)")
             data = extract_receipt(bank, reference)
-        return {"success": True, "data": data}
-    except ImportError:
-        return await _verify_receipt_direct(bank, reference, account_number)
-    except Exception as e:
-        return {"success": False, "error": str(e)}
-
-
-async def _verify_receipt_direct(bank: str, reference: str, account_number: Optional[str] = None) -> dict:
-    config = BANK_CONFIGS.get(bank)
-    if not config:
-        return {"success": False, "error": f"Unsupported bank: {bank}"}
-
-    verify_url = config["verify_url"]
-    url = verify_url + reference
-
-    try:
-        async with httpx.AsyncClient(timeout=30.0, verify=True) as client:
-            if bank == "cbe":
-                params = {"id": reference}
-                if account_number:
-                    params["account"] = account_number[-8:]
-                resp = await client.get(verify_url, params=params)
-            else:
-                resp = await client.get(url)
-
-            if resp.status_code == 200:
-                text = resp.text
-                data = _parse_receipt_html(bank, text, reference)
-                data["raw_html"] = text[:500]
+        elif bank == "cbe" and reference.upper().startswith("FT"):
+            from ethiobank_receipts.extractors.cbe import extract_cbe_receipt_info_from_ft
+            last_8 = account_number[-8:] if account_number and len(account_number) >= 8 else account_number or ""
+            logger.info(f"[verify_receipt] CBE FT extraction — ft={reference}, account_last8={last_8}")
+            data = extract_cbe_receipt_info_from_ft(reference, last_8)
+        else:
+            url = build_receipt_url(bank, reference)
+            logger.info(f"[verify_receipt] Constructed receipt URL: {url}")
+            if bank == "boa":
+                data = await _extract_boa_receipt(url)
+                if data.get("status") == "ERROR":
+                    return {"success": False, "error": data.get("error", "BOA extraction failed")}
                 return {"success": True, "data": data}
-            else:
-                return {"success": False, "error": f"HTTP {resp.status_code}: {resp.text[:200]}"}
-    except httpx.TimeoutException:
-        return {"success": False, "error": "Request timed out. The bank server may be slow or unreachable."}
+            logger.info(f"[verify_receipt] Calling ethiobank_receipts.extract_receipt(bank={bank}, url=...)")
+            data = extract_receipt(bank, url)
+
+        if not data or not isinstance(data, dict):
+            logger.warning(f"[verify_receipt] Library returned empty/invalid data: {data}")
+            return {"success": False, "error": "No data extracted from receipt"}
+        logger.info(f"[verify_receipt] Success — receiver={data.get('receiver_name', 'N/A')}({data.get('receiver_account', 'N/A')}), amount={data.get('amount', 'N/A')}, status={data.get('status', 'N/A')}")
+        return {"success": True, "data": data}
+
+    except ImportError:
+        logger.error("[verify_receipt] ethiobank_receipts library not installed")
+        return {"success": False, "error": "ethiobank_receipts library not installed"}
     except Exception as e:
+        logger.error(f"[verify_receipt] Exception: {e}")
         return {"success": False, "error": str(e)}
-
-
-def _parse_receipt_html(bank: str, html: str, reference: str) -> dict:
-    data = {
-        "reference": reference,
-        "bank": bank,
-        "status": "SUCCESS",
-    }
-    patterns = {
-        "payer_name": r"(?:Payer|From|Sender|Customer)\s*:?\s*([A-Za-z\s]+)",
-        "payer_account": r"(?:Payer Account|From Account|Sender Account)\s*:?\s*(\d+)",
-        "receiver_name": r"(?:Receiver|To|Beneficiary|Payee)\s*:?\s*([A-Za-z\s]+)",
-        "receiver_account": r"(?:Receiver Account|To Account|Beneficiary Account)\s*:?\s*(\d+)",
-        "amount": r"(?:Amount|Total|Amt)\s*:?\s*([\d,]+\.?\d*)",
-        "date": r"(?:Date|Transaction Date|Time)\s*:?\s*([\d/:\-\s]+)",
-    }
-    for key, pattern in patterns.items():
-        match = re.search(pattern, html, re.IGNORECASE)
-        if match:
-            val = match.group(1).strip()
-            if key == "amount":
-                val = float(val.replace(",", ""))
-            data[key] = val
-    if "amount" in data and "currency" not in data:
-        data["currency"] = "ETB"
-    return data
-
-
-async def verify_from_image(
-    image_path: str,
-    business_accounts: list,
-) -> dict:
-    qr_data = await extract_qr_from_image(image_path)
-    text_data = await extract_text_from_image(image_path)
-
-    combined_text = f"{qr_data or ''} {text_data or ''}"
-
-    bank = detect_bank_from_url(combined_text) or detect_bank_from_text(combined_text)
-    if not bank:
-        return {"success": False, "error": "Could not detect bank from image"}
-
-    reference = None
-    if qr_data:
-        reference = extract_reference_from_url(qr_data, bank)
-    if not reference:
-        reference = extract_ft_number(combined_text)
-
-    if not reference:
-        return {"success": False, "error": "Could not extract transaction reference from image"}
-
-    account_number = None
-    for acct in business_accounts:
-        if acct["bank_name"] == bank:
-            account_number = acct["account_number"]
-            break
-
-    result = await verify_receipt(bank, reference, account_number)
-    return result
 
 
 async def extract_qr_from_image(image_path: str) -> Optional[str]:
     try:
         from PIL import Image
-        import numpy as np
-        try:
-            from pyzbar.pyzbar import decode
-        except ImportError:
-            return None
+        from pyzbar.pyzbar import decode
         img = Image.open(image_path)
         decoded_objects = decode(img)
         for obj in decoded_objects:
             data = obj.data.decode("utf-8")
-            if data and ("http" in data or "FT" in data):
+            if data and len(data) > 5:
+                logger.info(f"[extract_qr] Found QR: {data[:120]}")
                 return data
+        logger.info(f"[extract_qr] No QR code found in image")
         return None
-    except Exception:
+    except Exception as e:
+        logger.warning(f"[extract_qr] Failed: {e}")
         return None
 
 
@@ -219,215 +212,79 @@ async def extract_text_from_image(image_path: str) -> Optional[str]:
         import pytesseract
         from PIL import Image
         text = pytesseract.image_to_string(Image.open(image_path))
-        return text.strip() if text.strip() else None
+        if text.strip():
+            logger.info(f"[extract_text] OCR extracted {len(text.strip())} chars: {text.strip()[:150]}")
+            return text.strip()
+        logger.info(f"[extract_text] OCR returned empty text")
+        return None
     except ImportError:
+        logger.warning(f"[extract_text] pytesseract not installed")
         return None
-    except Exception:
-        return None
-
-
-_receipt_cache: dict = {}
-GEMINI_MODEL = "gemini-3.5-flash"
-_http_client: Optional[httpx.AsyncClient] = None
-
-
-def _get_client():
-    global _http_client
-    if _http_client is None:
-        _http_client = httpx.AsyncClient(verify=False, timeout=10, limits=httpx.Limits(max_keepalive_connections=5))
-    return _http_client
-
-
-def _parse_table_html(html: str) -> dict:
-    from bs4 import BeautifulSoup
-    soup = BeautifulSoup(html, "lxml")
-    data = {}
-    for table in soup.find_all("table"):
-        for row in table.find_all("tr"):
-            cells = row.find_all(["td", "th"])
-            if len(cells) >= 2:
-                key = cells[0].get_text(strip=True).lower().replace(" ", "_").replace(":", "")
-                val = cells[1].get_text(strip=True)
-                data[key] = val
-    for p in soup.find_all("p"):
-        t = p.get_text(strip=True)
-        if ":" in t:
-            k, v = t.split(":", 1)
-            data[k.strip().lower().replace(" ", "_")] = v.strip()
-    return data
-
-
-def _parse_receipt_html(html: str) -> Optional[dict]:
-    raw = _parse_table_html(html)
-
-    def g(*keys):
-        for k in keys:
-            v = raw.get(k)
-            if v:
-                return v
+    except Exception as e:
+        logger.warning(f"[extract_text] Failed: {e}")
         return None
 
-    result = {}
 
-    bank_map = {
-        "cbe": ["cbe", "commercial bank of ethiopia", "commercial_bank_of_ethiopia"],
-        "dashen": ["dashen", "dashen bank", "dashen_bank"],
-        "awash": ["awash", "awash bank", "awash_bank"],
-        "boa": ["boa", "bank of abyssinia", "bank_of_abyssinia"],
-        "zemen": ["zemen", "zemen bank", "zemen_bank"],
-        "telebirr": ["telebirr", "ethio telecom", "ethio_telecom"],
-    }
-    page_text = html.lower()
-    for short, names in bank_map.items():
-        if any(n in page_text for n in names):
-            result["bank_name"] = short
-            break
-
-    ref = g("ft_reference", "ft_ref", "transaction_reference", "reference", "transaction_id", "trx", "id")
-    if ref:
-        m = re.search(r"(FT[a-zA-Z0-9]+)", ref)
-        if m:
-            ref = m.group(1)
-        result["transaction_reference"] = ref
-
-    amt_str = g("amount", "trx_amt", "transaction_amount", "total", "amount_etb", "amount_etb ")
-    if amt_str:
-        m = re.search(r"([\d,]+\.?\d*)", amt_str.replace(",", ""))
-        if m:
-            result["amount"] = float(m.group(1))
-
-    result["currency"] = g("currency") or "ETB"
-    payer = g("from_account_name", "sender_name", "payer_name", "from", "sender", "debit_account_name")
-    if payer:
-        result["payer_name"] = payer
-    payer_acct = g("from_account", "sender_account", "payer_account", "debit_account", "from_account_no")
-    if payer_acct:
-        result["payer_account"] = payer_acct
-    receiver = g("to_account_name", "receiver_name", "beneficiary_name", "to", "credit_account_name")
-    if receiver:
-        result["receiver_name"] = receiver
-    receiver_acct = g("to_account", "receiver_account", "beneficiary_account", "credit_account", "to_account_no")
-    if receiver_acct:
-        result["receiver_account"] = receiver_acct
-    date_str = g("date", "transaction_date", "trx_date", "value_date", "posting_date")
-    if date_str:
-        result["date"] = date_str
-
-    if not result.get("receiver_account") and not result.get("amount"):
+async def fetch_receipt_from_url(url: str) -> Optional[dict]:
+    bank = detect_bank_from_url(url)
+    logger.info(f"[fetch_receipt_from_url] URL={url[:100]}, detected_bank={bank}")
+    if not bank:
+        logger.warning(f"[fetch_receipt_from_url] No bank detected from URL")
         return None
-    return result
-
-
-async def extract_from_url(url: str) -> Optional[dict]:
-    if url in _receipt_cache:
-        return _receipt_cache[url]
     try:
-        client = _get_client()
-        resp = await client.get(url, follow_redirects=True)
-        if resp.status_code != 200:
-            return None
-        html = resp.text
-        parsed = _parse_receipt_html(html)
-        if parsed:
-            _receipt_cache[url] = parsed
-            return parsed
+        if bank == "boa":
+            data = await _extract_boa_receipt(url)
+        else:
+            from ethiobank_receipts import extract_receipt
+            data = extract_receipt(bank, url)
+        if data and isinstance(data, dict):
+            logger.info(f"[fetch_receipt_from_url] Success — receiver={data.get('receiver_name', 'N/A')}, amount={data.get('amount', 'N/A')}")
+            return data
+        logger.warning(f"[fetch_receipt_from_url] No data returned")
         return None
-    except Exception:
+    except Exception as e:
+        logger.error(f"[fetch_receipt_from_url] Exception: {e}")
         return None
 
 
-GEMINI_PROMPT = """Extract these fields as JSON from the receipt content. Return ONLY valid JSON.
-- bank_name: "cbe", "dashen", "awash", "boa", "zemen", or "telebirr"
-- transaction_reference: the FT number
-- amount: number
-- currency: "ETB"
-- payer_name: sender name
-- payer_account: sender account
-- receiver_name: recipient name
-- receiver_account: recipient account
-- date: transaction date
-
-{"bank_name": "cbe", "transaction_reference": "FT25211G11JQ", "amount": 1250.75, "currency": "ETB", "payer_name": "John Doe", "payer_account": "1000223344", "receiver_name": "Sunshine Cafe PLC", "receiver_account": "1000135792", "date": "2024-01-15"}"""
-
-
-async def _gemini_parse(content: str) -> Optional[dict]:
-    if not settings.GEMINI_API_KEY:
-        return None
-    from google import genai
-    from google.genai import errors
-    client = genai.Client(api_key=settings.GEMINI_API_KEY)
-    for attempt in range(5):
-        try:
-            resp = client.models.generate_content(model=GEMINI_MODEL, contents=[GEMINI_PROMPT + "\n\n" + content[:15000]])
-            text = resp.text.strip()
-            if text.startswith("```"):
-                text = text.split("\n", 1)[-1]
-                text = text.rsplit("```", 1)[0]
-            import json
-            d = json.loads(text.strip())
-            return d if isinstance(d, dict) else None
-        except errors.ClientError as e:
-            if e.code == 429:
-                import asyncio
-                await asyncio.sleep(2 ** attempt)
-                continue
-            return None
-        except Exception:
-            return None
-    return None
+GEMINI_EXTRACTION_PROMPT = """You are a receipt data extraction assistant. Extract the following fields from this Ethiopian bank transfer receipt image. Return ONLY valid JSON with these exact keys:
+{
+  "bank_name": "full bank name or null",
+  "transaction_reference": "reference/FT number or null",
+  "payer_name": "sender name or null",
+  "payer_account": "sender account number or null",
+  "receiver_name": "recipient name or null",
+  "receiver_account": "recipient account number or null",
+  "amount": "numeric amount or null",
+  "currency": "ETB",
+  "status": "SUCCESS"
+}
+If the receipt shows a successful transfer, status is "SUCCESS". If it shows failed/pending, use "FAILED" or "PENDING".
+Only output the JSON object, no markdown, no explanation."""
 
 
 async def extract_with_gemini(image_path: str) -> Optional[dict]:
-    qr_data = await extract_qr_from_image(image_path)
-
-    if qr_data and qr_data.startswith("http"):
-        result = await extract_from_url(qr_data)
-        if result:
-            return result
-        html = await _fetch_url(qr_data)
-        if html:
-            result = await _gemini_parse(html)
-            if result:
-                return result
-
-    mime_type, _ = mimetypes.guess_type(image_path)
-    if not mime_type or not mime_type.startswith("image/"):
-        mime_type = "image/png"
-    with open(image_path, "rb") as f:
-        img = f.read()
     if not settings.GEMINI_API_KEY:
+        logger.info(f"[extract_with_gemini] No GEMINI_API_KEY configured — skipping")
         return None
-    from google import genai
-    from google.genai import errors
-    client = genai.Client(api_key=settings.GEMINI_API_KEY)
-    for attempt in range(5):
-        try:
-            resp = client.models.generate_content(
-                model=GEMINI_MODEL,
-                contents=[GEMINI_PROMPT, {"inline_data": {"mime_type": mime_type, "data": img}}],
-            )
-            text = resp.text.strip()
-            if text.startswith("```"):
-                text = text.split("\n", 1)[-1]
-                text = text.rsplit("```", 1)[0]
-            import json
-            d = json.loads(text.strip())
-            return d if isinstance(d, dict) else None
-        except errors.ClientError as e:
-            if e.code == 429:
-                import asyncio
-                await asyncio.sleep(2 ** attempt)
-                continue
-            return None
-        except Exception:
-            return None
-    return None
-
-
-async def _fetch_url(url: str) -> Optional[str]:
+    logger.info(f"[extract_with_gemini] Sending image to Gemini for extraction")
     try:
-        client = _get_client()
-        resp = await client.get(url, follow_redirects=True)
-        return resp.text if resp.status_code == 200 else None
-    except Exception:
+        from google import genai
+        client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        from PIL import Image
+        img = Image.open(image_path)
+        response = client.models.generate_content(
+            model="gemini-2.0-flash",
+            contents=[GEMINI_EXTRACTION_PROMPT, img],
+        )
+        text = response.text.strip()
+        text = text.removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        data = json.loads(text)
+        if isinstance(data, dict) and data.get("transaction_reference"):
+            logger.info(f"[extract_with_gemini] Success — bank={data.get('bank_name')}, ref={data.get('transaction_reference')}, receiver={data.get('receiver_name')}({data.get('receiver_account')}), amount={data.get('amount')}")
+            return data
+        logger.warning(f"[extract_with_gemini] Gemini returned no transaction_reference: {data}")
+        return None
+    except Exception as e:
+        logger.error(f"[extract_with_gemini] Exception: {e}")
         return None
