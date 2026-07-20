@@ -24,6 +24,7 @@ async def seed(force: bool = False):
         await conn.run_sync(Base.metadata.create_all)
         await conn.run_sync(_migrate_business_columns)
         await conn.run_sync(_create_payments_table)
+    await _seed_data(force)
 
 
 SUPER_ADMIN_ID = UUID("00000000-0000-0000-0000-000000000099")
@@ -70,9 +71,11 @@ def _create_payments_table(conn):
             )
         """))
 
-    async with async_session_factory() as db:
-        from sqlalchemy import select, delete
 
+async def _seed_data(force: bool = False):
+    from sqlalchemy import select, delete
+
+    async with async_session_factory() as db:
         existing = await db.execute(
             select(Business).where(Business.id == DEMO_BUSINESS_ID)
         )

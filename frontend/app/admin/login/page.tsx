@@ -30,55 +30,55 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[#f7f7f7] flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary-600 text-white shadow-lg shadow-primary-200 mb-4">
-            <ShieldCheck size={28} />
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded bg-[#115ce9] text-white mb-4">
+            <ShieldCheck size={24} />
           </div>
-          <h1 className="text-2xl font-bold text-surface-900">Admin Login</h1>
-          <p className="text-surface-500 mt-1">Super admin dashboard</p>
+          <h1 className="text-[24px] font-bold text-[#37352f]">Admin Login</h1>
+          <p className="text-[#787774] mt-1 text-[14px]">Super admin dashboard</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-surface-100 shadow-sm p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="bg-white rounded-[3px] shadow-[0_1px_3px_rgba(0,0,0,0.06)] p-5 space-y-4">
           {error && (
-            <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700">{error}</div>
+            <div className="p-3 rounded bg-[#fde7e5] text-[13px] text-[#c73c3c]">{error}</div>
           )}
 
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-surface-700">Email</label>
+            <label className="block text-[13px] font-medium text-[#37352f]">Email</label>
             <div className="relative">
-              <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400" />
+              <Mail size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9b9a97]" />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="admin@surepay.et"
                 required
-                className="block w-full rounded-xl border border-surface-200 bg-white pl-10 pr-4 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                className="block w-full rounded-[3px] border border-[#e9e9e7] bg-white pl-8 pr-3 py-2 text-[14px] text-[#37352f] placeholder:text-[#9b9a97] focus:outline-none focus:border-[#115ce9]"
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-surface-700">Password</label>
+            <label className="block text-[13px] font-medium text-[#37352f]">Password</label>
             <div className="relative">
-              <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400" />
+              <Lock size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9b9a97]" />
               <input
                 type={show ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter password"
                 required
-                className="block w-full rounded-xl border border-surface-200 bg-white pl-10 pr-10 py-2.5 text-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
+                className="block w-full rounded-[3px] border border-[#e9e9e7] bg-white pl-8 pr-8 py-2 text-[14px] text-[#37352f] placeholder:text-[#9b9a97] focus:outline-none focus:border-[#115ce9]"
               />
               <button
                 type="button"
                 onClick={() => setShow(!show)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-surface-400 hover:text-surface-600"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[#9b9a97] hover:text-[#37352f]"
                 aria-label={show ? "Hide password" : "Show password"}
               >
-                {show ? <EyeOff size={16} /> : <Eye size={16} />}
+                {show ? <EyeOff size={14} /> : <Eye size={14} />}
               </button>
             </div>
           </div>
@@ -86,14 +86,14 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 bg-primary-600 text-white rounded-xl font-medium text-sm hover:bg-primary-700 transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
+            className="w-full py-2 bg-[#115ce9] text-white rounded-[3px] font-medium text-[14px] hover:bg-[#0d4fc4] transition-colors disabled:opacity-50 inline-flex items-center justify-center gap-2"
           >
             {loading ? "Signing in..." : "Sign In"}
-            <ArrowRight size={16} />
+            <ArrowRight size={14} />
           </button>
         </form>
 
-        <p className="text-xs text-surface-400 text-center mt-6">
+        <p className="text-[12px] text-[#9b9a97] text-center mt-6">
           &copy; {new Date().getFullYear()} Surepay Admin
         </p>
       </div>

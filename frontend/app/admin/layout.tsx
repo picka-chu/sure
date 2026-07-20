@@ -31,6 +31,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
 
   useEffect(() => {
+    if (pathname === "/admin/login") {
+      setReady(true);
+      return;
+    }
     const stored = localStorage.getItem("admin_user");
     const token = localStorage.getItem("admin_token");
     if (!token || !stored) {
@@ -39,7 +43,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     }
     setUser(JSON.parse(stored));
     setReady(true);
-  }, [router]);
+  }, [router, pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem("admin_token");
@@ -48,6 +52,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   };
 
   if (!ready) return null;
+
+  if (pathname === "/admin/login") {
+    return <>{children}</>;
+  }
 
   const isActive = (href: string) => {
     if (href === "/admin") return pathname === "/admin";
