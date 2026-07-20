@@ -11,3 +11,6 @@ uploads/*
 .pytest_cache/
 *.egg
 .DS_Store
+
+ethiobank_receipts_source/
+
