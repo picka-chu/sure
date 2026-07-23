@@ -16,31 +16,59 @@ BANK_INFO = {
         "name": "Commercial Bank of Ethiopia",
         "url_template": "https://apps.cbe.com.et:100/?id={ref}",
         "url_regex": r"https://apps\.cbe\.com\.et:100/\?id=(FT[a-zA-Z0-9]+)",
+        "ref_patterns": [
+            r"FT[a-zA-Z0-9]{8,}",
+            r"(?:Transaction|Reference|Ref)\s*(?:No|Number|#|ID)?[:\s]*([A-Z0-9]{8,})",
+        ],
+        "ref_example": "FT25211G11JQ",
     },
     "dashen": {
         "name": "Dashen Bank",
         "url_template": "https://receipt.dashensuperapp.com/receipt/{ref}",
         "url_regex": r"https://receipt\.dashensuperapp\.com/receipt/([a-zA-Z0-9]+)",
+        "ref_patterns": [
+            r"(?:Transfer|Transaction)\s*(?:Ref|Reference)[:\s]*([A-Z0-9]{6,})",
+            r"(?:Receipt|Ref)\s*(?:No|#)[:\s]*([A-Z0-9]{6,})",
+        ],
+        "ref_example": "387ETAP2522000WK",
     },
     "awash": {
         "name": "Awash Bank",
         "url_template": "https://awashpay.awashbank.com:8225/{ref}",
         "url_regex": r"https://awashpay\.awashbank\.com:8225/([a-zA-Z0-9\-]+)",
+        "ref_patterns": [
+            r"(?:Transaction|Trx)\s*(?:ID|Ref|Reference)[:\s]*([A-Z0-9\-]{6,})",
+        ],
+        "ref_example": "-E41AE0D86FFA-21XYYW",
     },
     "boa": {
         "name": "Bank of Abyssinia",
         "url_template": "https://cs.bankofabyssinia.com/slip/?trx={ref}",
         "url_regex": r"https://cs\.bankofabyssinia\.com/slip/\?trx=([a-zA-Z0-9]+)",
+        "ref_patterns": [
+            r"(?:Transaction|Trx)\s*(?:Ref|Reference)[:\s]*([A-Z0-9]{5,})",
+            r"BOA[A-Z0-9]{5,}",
+        ],
+        "ref_example": "BOA123456789",
     },
     "zemen": {
         "name": "Zemen Bank",
         "url_template": "https://share.zemenbank.com/rt/{ref}/pdf",
         "url_regex": r"https://share\.zemenbank\.com/rt/([a-zA-Z0-9]+)/pdf",
+        "ref_patterns": [
+            r"(?:Reference|Ref)\s*(?:No|#)[:\s]*([A-Z0-9]{10,})",
+        ],
+        "ref_example": "94497018108ATWR2520600HM",
     },
     "telebirr": {
         "name": "Telebirr (Ethio telecom)",
         "url_template": "https://transactioninfo.ethiotelecom.et/receipt/{ref}",
         "url_regex": r"https://transactioninfo\.ethiotelecom\.et/receipt/([a-zA-Z0-9]+)",
+        "ref_patterns": [
+            r"(?:Receipt|Transaction|Ref)\s*(?:No|ID|#)[:\s]*([A-Z0-9]{5,})",
+            r"CHQ[A-Z0-9]{4,}",
+        ],
+        "ref_example": "CHQ0FJ403O",
     },
 }
 
@@ -93,9 +121,33 @@ def extract_reference_from_url(url: str, bank: str) -> Optional[str]:
     return None
 
 
-def extract_ft_number(text: str) -> Optional[str]:
-    match = re.search(r"FT[a-zA-Z0-9]+", text, re.IGNORECASE)
-    return match.group(0).upper() if match else None
+def extract_reference(text: str, bank_hint: Optional[str] = None) -> Optional[str]:
+    if not text:
+        return None
+    text_upper = text.upper()
+
+    if bank_hint and bank_hint in BANK_INFO:
+        for pat in BANK_INFO[bank_hint]["ref_patterns"]:
+            m = re.search(pat, text_upper)
+            if m:
+                ref = m.group(1) if m.lastindex else m.group(0)
+                if len(ref) >= 4:
+                    logger.info(f"[extract_ref] Bank={bank_hint}, matched pattern, ref={ref[:30]}")
+                    return ref
+
+    for bank_key, info in BANK_INFO.items():
+        if bank_hint and bank_key != bank_hint:
+            continue
+        for pat in info["ref_patterns"]:
+            m = re.search(pat, text_upper)
+            if m:
+                ref = m.group(1) if m.lastindex else m.group(0)
+                if len(ref) >= 4:
+                    logger.info(f"[extract_ref] Matched bank={bank_key} pattern, ref={ref[:30]}")
+                    return ref
+
+    logger.info(f"[extract_ref] No reference pattern matched in text")
+    return None
 
 
 def build_receipt_url(bank: str, reference: str) -> str:

@@ -14,7 +14,7 @@ from app.models.business import Business
 from app.models.bank import BankAccount, BankName
 from app.models.verification import Verification, VerificationStatus
 from app.schemas.verification import VerificationResponse, VerifyCaptureResponse
-from app.services.verification_service import verify_receipt, detect_bank_from_url, detect_bank_from_text, extract_ft_number, extract_qr_from_image, extract_text_from_image, fetch_receipt_from_url, extract_with_gemini
+from app.services.verification_service import verify_receipt, detect_bank_from_url, detect_bank_from_text, extract_reference, extract_qr_from_image, extract_text_from_image, fetch_receipt_from_url, extract_with_gemini
 from typing import List, Optional
 from app.config import settings
 
@@ -179,27 +179,27 @@ async def verify_by_capture(
             return await _handle_receipt_data(receipt_data, qr_data, accounts, accounts_list, business_id, staff_id, file_path, bank, ref, db)
         logger.warning(f"[capture] Failed to fetch receipt from QR URL — falling through")
 
-    if qr_data and not qr_data.startswith("http"):
-        ref_val = extract_ft_number(qr_data)
-        if ref_val:
-            ref = ref or ref_val
-            logger.info(f"[capture] Extracted FT number from QR: {ref}")
-        else:
-            logger.info(f"[capture] QR data (non-URL) but no FT number found: {qr_data[:100]}")
-    else:
-        ref_val = extract_ft_number(combined)
-        if ref_val:
-            ref = ref or ref_val
-            logger.info(f"[capture] Extracted FT number from OCR text: {ref}")
-        else:
-            logger.info(f"[capture] No FT number found in OCR text")
-
     detected_bank = detect_bank_from_url(combined) or detect_bank_from_text(combined)
     if detected_bank:
         bank = bank or detected_bank
         logger.info(f"[capture] Bank detected from image: {bank}")
     else:
-        logger.info(f"[capture] Bank not detectable from image")
+        logger.info(f"[capture] Bank not detectable from image, trying all patterns")
+
+    if qr_data and not qr_data.startswith("http"):
+        ref_val = extract_reference(qr_data, bank_hint=bank)
+        if ref_val:
+            ref = ref or ref_val
+            logger.info(f"[capture] Extracted reference from QR: {ref}")
+        else:
+            logger.info(f"[capture] QR data (non-URL) but no reference found: {qr_data[:100]}")
+    else:
+        ref_val = extract_reference(combined, bank_hint=bank)
+        if ref_val:
+            ref = ref or ref_val
+            logger.info(f"[capture] Extracted reference from OCR text: {ref}")
+        else:
+            logger.info(f"[capture] No reference found in OCR text")
 
     if not bank or not ref:
         logger.info(f"[capture] Missing bank or ref — trying Gemini fallback on image")
@@ -268,13 +268,15 @@ async def _handle_receipt_data(data: dict, receipt_url: str, accounts: list, acc
     status = data.get("status")
     is_verified = matches if status is None else (status == "SUCCESS" and matches)
     status_enum = VerificationStatus.VERIFIED if is_verified else VerificationStatus.SCAM
-    expected = next((a.account_number for a in accounts if a.bank_name.value == (bank or "unknown")), None) if accounts else None
+    matched_name = data.get("receiver_name", "")
+    matched_acct = data.get("receiver_account", "")
     if is_verified:
         reason = f"Transaction confirmed by {data.get('bank_name', bank or 'bank')}. Receiver account matches your registered business account."
     elif status is not None and status != "SUCCESS":
         reason = f"Bank returned non-success status: {status}. This transaction could not be confirmed."
     else:
-        reason = f"Bank confirmed the transaction but the receiver does not match your business. Expected: {expected or 'N/A'}, got: {data.get('receiver_name', 'unknown')} ({data.get('receiver_account', 'unknown')})."
+        all_expected = ", ".join(f"{a.bank_name.value}: {a.account_number} ({a.account_holder_name})" for a in accounts) if accounts else "N/A"
+        reason = f"Bank confirmed the transaction but the receiver does not match your business. Received by: {matched_name} ({matched_acct}). Your registered accounts: {all_expected}."
     verification = Verification(
         business_id=business_id,
         staff_id=staff_id,
@@ -320,14 +322,16 @@ async def _process_result(data: dict, bank: str, accounts: list, business_id, st
     matches = any(acct.account_number == data.get("receiver_account") or _nm(acct, data.get("receiver_name")) for acct in accounts)
     is_verified = data.get("status") == "SUCCESS" and matches
     status_enum = VerificationStatus.VERIFIED if is_verified else VerificationStatus.SCAM
-    expected = next((a.account_number for a in accounts if a.bank_name.value == bank), None)
     logger.info(f"[process_result] bank={bank}, receiver={data.get('receiver_name')}({data.get('receiver_account')}), matches_business={matches}, is_verified={is_verified}")
     if is_verified:
         reason = f"Transaction confirmed by {data.get('bank_name', bank)}. Receiver account matches your registered business account."
     elif data.get("status") != "SUCCESS":
         reason = f"Bank returned non-success status: {data.get('status', 'unknown')}. This transaction could not be confirmed."
     else:
-        reason = f"Bank confirmed the transaction but the receiver does not match your business. Expected receiver account: {expected or 'N/A'}, but the payment was sent to {data.get('receiver_name', 'unknown')} ({data.get('receiver_account', 'unknown')})."
+        matched_name = data.get("receiver_name", "unknown")
+        matched_acct = data.get("receiver_account", "unknown")
+        all_expected = ", ".join(f"{a.bank_name.value}: {a.account_number} ({a.account_holder_name})" for a in accounts) if accounts else "N/A"
+        reason = f"Bank confirmed the transaction but the receiver does not match your business. Received by: {matched_name} ({matched_acct}). Your registered accounts: {all_expected}."
     verification = Verification(
         business_id=business_id,
         staff_id=staff_id,
