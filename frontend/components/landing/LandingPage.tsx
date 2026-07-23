@@ -20,6 +20,7 @@ import {
   Globe,
   Lock,
   ChevronRight,
+  Code2,
 } from "lucide-react";
 
 const features = [
@@ -49,9 +50,9 @@ const features = [
     description: "AI-powered receipt analysis flags suspicious payments before they cost you.",
   },
   {
-    icon: Clock,
-    title: "7-Day Free Trial",
-    description: "No credit card required. Start protecting your business today.",
+    icon: Code2,
+    title: "Developer API",
+    description: "Integrate payment verification into your apps. REST API + Python SDK available on paid plans.",
   },
 ];
 
@@ -103,6 +104,7 @@ export default function LandingPage() {
               <button onClick={() => scrollTo("features")} className="text-sm text-surface-600 hover:text-surface-900 transition-colors">Features</button>
               <button onClick={() => scrollTo("how-it-works")} className="text-sm text-surface-600 hover:text-surface-900 transition-colors">How It Works</button>
               <button onClick={() => scrollTo("pricing")} className="text-sm text-surface-600 hover:text-surface-900 transition-colors">Pricing</button>
+              <Link href="/docs" className="text-sm text-surface-600 hover:text-surface-900 transition-colors">API</Link>
             </nav>
 
             <div className="hidden md:flex items-center gap-3">
@@ -132,6 +134,7 @@ export default function LandingPage() {
             <button onClick={() => scrollTo("features")} className="block w-full text-left px-3 py-2 text-sm text-surface-600 hover:bg-surface-50 rounded-lg">Features</button>
             <button onClick={() => scrollTo("how-it-works")} className="block w-full text-left px-3 py-2 text-sm text-surface-600 hover:bg-surface-50 rounded-lg">How It Works</button>
             <button onClick={() => scrollTo("pricing")} className="block w-full text-left px-3 py-2 text-sm text-surface-600 hover:bg-surface-50 rounded-lg">Pricing</button>
+            <Link href="/docs" className="block w-full text-left px-3 py-2 text-sm text-surface-600 hover:bg-surface-50 rounded-lg">API</Link>
             <hr className="border-surface-100" />
             <Link href="/login" className="block px-3 py-2 text-sm font-medium text-surface-700">Sign In</Link>
             <Link href="/register" className="block px-3 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-xl text-center">Get Started Free</Link>
@@ -308,14 +311,14 @@ export default function LandingPage() {
                 name: "Monthly",
                 price: "ETB 750",
                 period: "/month",
-                features: ["Unlimited verifications", "All banks supported", "Staff management", "Analytics dashboard", "Email support"],
+                features: ["Unlimited verifications", "All banks supported", "Staff management", "Analytics dashboard", "API Access + Python SDK", "Email support"],
                 popular: false,
               },
               {
                 name: "Yearly",
                 price: "ETB 7,500",
                 period: "/year",
-                features: ["Everything in Monthly", "Priority support", "2 months free", "Best value"],
+                features: ["Everything in Monthly", "Priority support", "API Access + Python SDK", "2 months free", "Best value"],
                 popular: true,
               },
             ].map((plan) => (
@@ -405,6 +408,7 @@ export default function LandingPage() {
               <div className="space-y-2">
                 <button onClick={() => scrollTo("features")} className="block text-sm text-surface-500 hover:text-surface-700 transition-colors">Features</button>
                 <button onClick={() => scrollTo("pricing")} className="block text-sm text-surface-500 hover:text-surface-700 transition-colors">Pricing</button>
+                <Link href="/docs" className="block text-sm text-surface-500 hover:text-surface-700 transition-colors">API / Docs</Link>
                 <Link href="/login" className="block text-sm text-surface-500 hover:text-surface-700 transition-colors">Sign In</Link>
                 <Link href="/register" className="block text-sm text-surface-500 hover:text-surface-700 transition-colors">Register</Link>
               </div>

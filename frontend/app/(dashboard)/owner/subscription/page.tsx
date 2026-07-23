@@ -24,7 +24,7 @@ const PLANS = [
     amount: 750,
     currency: "ETB",
     description: "Billed every month",
-    features: ["Unlimited verifications", "All banks supported", "Staff management", "Analytics dashboard", "Email support"],
+    features: ["Unlimited verifications", "All banks supported", "Staff management", "Analytics dashboard", "API Access + Python SDK", "Email support"],
   },
   {
     plan: "yearly",
@@ -33,7 +33,7 @@ const PLANS = [
     currency: "ETB",
     description: "Billed annually (2 months free)",
     discount_note: "Save 2 months",
-    features: ["Unlimited verifications", "All banks supported", "Staff management", "Analytics dashboard", "Priority support", "Best value"],
+    features: ["Unlimited verifications", "All banks supported", "Staff management", "Analytics dashboard", "API Access + Python SDK", "Priority support", "Best value"],
   },
 ];
 
