@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 from jose import jwt
@@ -8,6 +9,8 @@ from app.models.user import User
 from app.models.business import Business, SubscriptionStatus
 from app.models.staff import StaffUser
 from app.services.subscription_service import sync_subscription_expiry
+
+audit_logger = logging.getLogger("surepay.audit")
 
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None) -> str:
@@ -27,7 +30,7 @@ async def register_business(
 ) -> dict:
     existing = await db.execute(select(Business).where(Business.email == email))
     if existing.scalar_one_or_none():
-        raise ValueError("Business with this email already exists")
+        raise ValueError("Registration failed. Please check your details and try again.")
 
     business = Business(
         name=business_name,
@@ -68,12 +71,14 @@ async def login_owner(db: AsyncSession, email: str, password: str) -> dict:
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
     if not user or not user.verify_password(password):
+        audit_logger.warning(f"Failed login attempt for email={email}")
         raise ValueError("Invalid email or password")
 
     result = await db.execute(select(Business).where(Business.id == user.business_id))
     business = result.scalar_one_or_none()
     if not business or not business.is_active:
-        raise ValueError("Business account is inactive")
+        audit_logger.warning(f"Login blocked — inactive business for user={user.id}")
+        raise ValueError("Invalid email or password")
 
     await sync_subscription_expiry(db, user.business_id)
 

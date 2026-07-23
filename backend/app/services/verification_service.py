@@ -9,6 +9,7 @@ from urllib.parse import urlparse, parse_qs
 from app.config import settings
 
 logger = logging.getLogger("surepay.verify.service")
+HTTP_TIMEOUT = 20.0
 
 BANK_INFO = {
     "cbe": {
@@ -189,13 +190,22 @@ def _get_normalizer(bank: str) -> dict:
 
 # ─── Bank-specific extractors ───
 
+def _download_pdf(url: str) -> str:
+    import requests
+    resp = requests.get(url, verify=False, timeout=HTTP_TIMEOUT)
+    resp.raise_for_status()
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+    tmp.write(resp.content)
+    tmp.close()
+    return tmp.name
+
+
 async def _extract_cbe(url: str) -> dict:
     logger.info(f"[cbe] Extracting CBE receipt")
-    from ethiobank_receipts.download import download_pdf_from_url
     import pdfplumber
     from concurrent.futures import ThreadPoolExecutor
 
-    pdf_path = download_pdf_from_url(url)
+    pdf_path = _download_pdf(url)
     try:
         with pdfplumber.open(pdf_path) as pdf:
             with ThreadPoolExecutor() as executor:
@@ -245,11 +255,10 @@ async def _extract_cbe_from_ft(ft_number: str, account_last8_or_full: str) -> di
 
 async def _extract_dashen(url: str) -> dict:
     logger.info(f"[dashen] Extracting Dashen receipt")
-    from ethiobank_receipts.download import download_pdf_from_url
     import pdfplumber
     from concurrent.futures import ThreadPoolExecutor
 
-    pdf_path = download_pdf_from_url(url)
+    pdf_path = _download_pdf(url)
     try:
         with pdfplumber.open(pdf_path) as pdf:
             with ThreadPoolExecutor() as executor:
@@ -336,11 +345,10 @@ async def _extract_boa(url: str) -> dict:
 
 async def _extract_zemen(url: str) -> dict:
     logger.info(f"[zemen] Extracting Zemen receipt PDF")
-    from ethiobank_receipts.download import download_pdf_from_url
     import pdfplumber
     from concurrent.futures import ThreadPoolExecutor
 
-    pdf_path = download_pdf_from_url(url)
+    pdf_path = _download_pdf(url)
     try:
         with pdfplumber.open(pdf_path) as pdf:
             with ThreadPoolExecutor() as executor:
@@ -381,11 +389,11 @@ async def _extract_zemen(url: str) -> dict:
 
 async def _extract_telebirr(url_or_id: str) -> dict:
     logger.info(f"[telebirr] Extracting Telebirr receipt")
-    from ethiobank_receipts.download import session as http_session
+    import requests
 
     url = url_or_id if is_url(url_or_id) else f"https://transactioninfo.ethiotelecom.et/receipt/{url_or_id}"
-    http_session.headers.update({"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"})
-    resp = http_session.get(url)
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
+    resp = requests.get(url, headers=headers, timeout=HTTP_TIMEOUT)
     resp.raise_for_status()
 
     from bs4 import BeautifulSoup

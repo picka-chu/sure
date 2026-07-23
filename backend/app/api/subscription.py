@@ -115,18 +115,11 @@ async def payment_history(
 
 @router.get("/admin/pending-payments", response_model=List[PaymentResponse])
 async def admin_pending_payments(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
 ):
-    business = await db.get(Business, current_user.business_id)
-    if not business:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Business not found")
-
     result = await db.execute(
-        select(Payment).where(
-            Payment.business_id == current_user.business_id,
-            Payment.status == PaymentStatus.PENDING,
-        ).order_by(Payment.created_at.asc())
+        select(Payment).where(Payment.status == PaymentStatus.PENDING).order_by(Payment.created_at.asc())
     )
     return result.scalars().all()
 
@@ -135,7 +128,7 @@ async def admin_pending_payments(
 async def admin_verify_payment(
     payment_id: uuid.UUID,
     req: AdminVerifyPaymentRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_admin),
     db: AsyncSession = Depends(get_db),
 ):
     try:

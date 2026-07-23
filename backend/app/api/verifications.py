@@ -2,11 +2,12 @@ import os
 import uuid
 import logging
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, status, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database import get_db
 from app.middleware.auth import get_current_user, get_current_staff, get_current_any
+from app.middleware.subscription import require_active_subscription
 from app.models.user import User
 from app.models.staff import StaffUser
 from app.models.business import Business
@@ -18,19 +19,24 @@ from typing import List, Optional
 from app.config import settings
 
 logger = logging.getLogger("surepay.verify")
+from app.limiter import limiter
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "bmp", "webp"}
 ALLOWED_MIME_PREFIXES = {"image/"}
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 
 router = APIRouter(prefix="/api/verifications", tags=["Verifications"])
 
 
 @router.post("/verify-link", response_model=VerifyCaptureResponse)
+@limiter.limit("30/minute")
 async def verify_by_link(
+    request: Request,
     bank_name: str = Form(...),
     reference: str = Form(...),
     account_number: Optional[str] = Form(None),
     current_user: User = Depends(get_current_user),
+    _: None = Depends(require_active_subscription),
     db: AsyncSession = Depends(get_db),
 ):
     result = await verify_receipt(bank_name, reference, account_number)
@@ -63,9 +69,16 @@ async def verify_by_link(
     )
     accounts = bank_accounts.scalars().all()
 
+    def _name_matches(acct, receiver_name):
+        name = acct.account_holder_name.lower().strip()
+        rname = (receiver_name or "").lower().strip()
+        if not name or not rname or len(name) < 3:
+            return False
+        return name == rname or rname.startswith(name) or rname.endswith(name) or f" {name} " in f" {rname} "
+
     matches = any(
         acct.account_number == data.get("receiver_account") or
-        acct.account_holder_name.lower() in data.get("receiver_name", "").lower()
+        _name_matches(acct, data.get("receiver_name"))
         for acct in accounts
     )
 
@@ -107,11 +120,14 @@ async def verify_by_link(
 
 
 @router.post("/capture", response_model=VerifyCaptureResponse)
+@limiter.limit("20/minute")
 async def verify_by_capture(
+    request: Request,
     file: UploadFile = File(...),
     bank_name: Optional[str] = Form(None),
     reference: Optional[str] = Form(None),
     current_user = Depends(get_current_any),
+    _: None = Depends(require_active_subscription),
     db: AsyncSession = Depends(get_db),
 ):
     from app.models.user import User
@@ -122,6 +138,8 @@ async def verify_by_capture(
     ext = os.path.splitext(file.filename or "capture.png")[1].lower().lstrip(".") or "png"
     if ext not in ALLOWED_EXTENSIONS or not file.content_type or not file.content_type.startswith(tuple(ALLOWED_MIME_PREFIXES)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid file type. Only images are allowed.")
+    if file.size and file.size > MAX_FILE_SIZE:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail=f"File too large. Maximum size is {MAX_FILE_SIZE // (1024*1024)}MB.")
 
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
     file_name = f"{uuid.uuid4()}.{ext}"
@@ -213,6 +231,10 @@ async def verify_by_capture(
             acct_number = acct["account_number"]
             break
 
+    existing = await db.execute(select(Verification).where(Verification.transaction_reference == ref, Verification.business_id == business_id))
+    if existing.scalar_one_or_none():
+        logger.warning(f"[capture] Duplicate verification for ref={ref} — allowing re-verification")
+
     logger.info(f"[capture] Calling verify_receipt — bank={bank}, ref={ref}, account_last8={acct_number[-8:] if acct_number else 'none'}")
     result = await verify_receipt(bank, ref, acct_number)
     logger.info(f"[capture] verify_receipt result — success={result['success']}, error={result.get('error', 'none')}")
@@ -239,11 +261,10 @@ async def _handle_receipt_data(data: dict, receipt_url: str, accounts: list, acc
     bank = bank_name or data.get("bank_name") or detect_bank_from_url(receipt_url) or detect_bank_from_text(json.dumps(data))
     txn_ref = ref or data.get("reference") or data.get("transaction_reference")
     logger.info(f"[handle_receipt] bank={bank}, ref={txn_ref}, matching {len(accounts)} business accounts")
-    matches = any(
-        acct.account_number == data.get("receiver_account") or
-        acct.account_holder_name.lower() in data.get("receiver_name", "").lower()
-        for acct in accounts
-    )
+    def _nm(acct, rname):
+        n = acct.account_holder_name.lower().strip(); r = (rname or "").lower().strip()
+        return n and r and len(n) >= 3 and (n == r or r.startswith(n) or r.endswith(n) or f" {n} " in f" {r} ")
+    matches = any(acct.account_number == data.get("receiver_account") or _nm(acct, data.get("receiver_name")) for acct in accounts)
     status = data.get("status")
     is_verified = matches if status is None else (status == "SUCCESS" and matches)
     status_enum = VerificationStatus.VERIFIED if is_verified else VerificationStatus.SCAM
@@ -293,11 +314,10 @@ def _create_failed_verification(business_id, staff_id, file_path, error, bank=No
 
 
 async def _process_result(data: dict, bank: str, accounts: list, business_id, staff_id, file_path, ref, db):
-    matches = any(
-        acct.account_number == data.get("receiver_account") or
-        acct.account_holder_name.lower() in data.get("receiver_name", "").lower()
-        for acct in accounts
-    )
+    def _nm(acct, rname):
+        n = acct.account_holder_name.lower().strip(); r = (rname or "").lower().strip()
+        return n and r and len(n) >= 3 and (n == r or r.startswith(n) or r.endswith(n) or f" {n} " in f" {r} ")
+    matches = any(acct.account_number == data.get("receiver_account") or _nm(acct, data.get("receiver_name")) for acct in accounts)
     is_verified = data.get("status") == "SUCCESS" and matches
     status_enum = VerificationStatus.VERIFIED if is_verified else VerificationStatus.SCAM
     expected = next((a.account_number for a in accounts if a.bank_name.value == bank), None)
@@ -335,23 +355,22 @@ async def _handle_gemini_fallback(data: dict, accounts: list, business_id, staff
     bank = data.get("bank_name")
     ref = data.get("transaction_reference")
     logger.info(f"[gemini_fallback] Processing Gemini data — bank={bank}, ref={ref}, receiver={data.get('receiver_name')}({data.get('receiver_account')}), amount={data.get('amount')}")
-    matches = any(
-        acct.account_number == data.get("receiver_account") or
-        acct.account_holder_name.lower() in data.get("receiver_name", "").lower()
-        for acct in accounts
-    )
+    def _nm(acct, rname):
+        n = acct.account_holder_name.lower().strip(); r = (rname or "").lower().strip()
+        return n and r and len(n) >= 3 and (n == r or r.startswith(n) or r.endswith(n) or f" {n} " in f" {r} ")
+    matches = any(acct.account_number == data.get("receiver_account") or _nm(acct, data.get("receiver_name")) for acct in accounts)
     status = data.get("status")
     is_verified = matches if status is None else (status == "SUCCESS" and matches)
     status_enum = VerificationStatus.VERIFIED if is_verified else VerificationStatus.SCAM
     expected = next((a.account_number for a in accounts if a.bank_name.value.lower() in (bank or "").lower()), None) if accounts else None
     if is_verified:
-        reason = f"Transaction confirmed (AI-extracted). Receiver account matches your registered business account."
+        reason = f"AI-extracted from image — not confirmed by bank. Receiver matches your business account. Verify manually if needed."
     elif status is not None and status != "SUCCESS":
         reason = f"Receipt shows non-success status: {status}."
     else:
         actual_receiver = data.get("receiver_name", "unknown")
         actual_account = data.get("receiver_account", "unknown")
-        reason = f"AI extracted receipt data but the receiver does not match your business. Expected: {expected or 'N/A'}, got: {actual_receiver} ({actual_account})."
+        reason = f"AI-extracted receipt data — receiver does not match your business. Expected: {expected or 'N/A'}, got: {actual_receiver} ({actual_account})."
     verification = Verification(
         business_id=business_id,
         staff_id=staff_id,

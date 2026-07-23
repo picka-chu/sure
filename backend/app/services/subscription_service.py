@@ -8,22 +8,11 @@ from app.models.business import Business, SubscriptionStatus, PlanType
 from app.models.payment import Payment, PaymentStatus, PaymentMethod, PlanType as PaymentPlanType
 from app.config import settings
 
-MONTHLY_PRICE = 750.0
-YEARLY_PRICE = 7500.0
+MONTHLY_PRICE = settings.PRICING_MONTHLY_AMOUNT
+YEARLY_PRICE = settings.PRICING_YEARLY_AMOUNT
 TRIAL_DAYS = 7
 
-PAYMENT_ACCOUNTS = {
-    "cbe": {
-        "bank_name": "Commercial Bank of Ethiopia (CBE)",
-        "account_holder": "Bereket Tesfalem",
-        "account_number": "1000602869893",
-    },
-    "telebirr": {
-        "bank_name": "Telebirr (Ethio telecom)",
-        "account_holder": "Bereket Tesfalem",
-        "account_number": "0930529985",
-    },
-}
+PAYMENT_ACCOUNTS = settings.PAYMENT_ACCOUNTS
 
 PRICING = [
     {
