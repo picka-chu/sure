@@ -6,13 +6,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from app.models.business import Business, SubscriptionStatus, PlanType
 from app.models.payment import Payment, PaymentStatus, PaymentMethod, PlanType as PaymentPlanType
-from app.config import settings
+from app.config import settings, PAYMENT_ACCOUNTS as _PAYMENT_ACCOUNTS
 
 MONTHLY_PRICE = settings.PRICING_MONTHLY_AMOUNT
 YEARLY_PRICE = settings.PRICING_YEARLY_AMOUNT
 TRIAL_DAYS = 7
 
-PAYMENT_ACCOUNTS = settings.PAYMENT_ACCOUNTS
+PAYMENT_ACCOUNTS = _PAYMENT_ACCOUNTS
 
 PRICING = [
     {
