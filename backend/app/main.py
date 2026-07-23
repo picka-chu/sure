@@ -6,7 +6,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from app.config import settings
 from app.limiter import limiter
-from app.api import auth, businesses, banks, staff, verifications, analytics, subscription, admin
+from app.api import auth, businesses, banks, staff, verifications, analytics, subscription, admin, developer
 
 logging.basicConfig(
     level=logging.INFO,
@@ -69,7 +69,7 @@ app.add_middleware(
     allow_origins=[settings.FRONTEND_URL],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["Authorization", "Content-Type"],
+    allow_headers=["Authorization", "Content-Type", "X-API-Key"],
 )
 
 app.include_router(auth.router)
@@ -80,6 +80,7 @@ app.include_router(verifications.router)
 app.include_router(analytics.router)
 app.include_router(subscription.router)
 app.include_router(admin.router)
+app.include_router(developer.router)
 
 
 @app.api_route("/api/health", methods=["GET", "HEAD"])

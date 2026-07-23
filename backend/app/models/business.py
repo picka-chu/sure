@@ -53,3 +53,4 @@ class Business(Base):
     bank_accounts = relationship("BankAccount", back_populates="business", cascade="all, delete-orphan")
     staff_users = relationship("StaffUser", back_populates="business", cascade="all, delete-orphan")
     verifications = relationship("Verification", back_populates="business", cascade="all, delete-orphan")
+    api_keys = relationship("ApiKey", back_populates="business", cascade="all, delete-orphan")
