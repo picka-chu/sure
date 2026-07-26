@@ -104,7 +104,8 @@ export default function LandingPage() {
               <button onClick={() => scrollTo("features")} className="text-sm text-surface-600 hover:text-surface-900 transition-colors">Features</button>
               <button onClick={() => scrollTo("how-it-works")} className="text-sm text-surface-600 hover:text-surface-900 transition-colors">How It Works</button>
               <button onClick={() => scrollTo("pricing")} className="text-sm text-surface-600 hover:text-surface-900 transition-colors">Pricing</button>
-              <Link href="/docs" className="text-sm text-surface-600 hover:text-surface-900 transition-colors">API</Link>
+              <Link href="/docs" className="text-sm text-surface-600 hover:text-surface-900 transition-colors">Docs</Link>
+              <Link href="/developer/register" className="text-sm text-surface-600 hover:text-surface-900 transition-colors">Developer API</Link>
             </nav>
 
             <div className="hidden md:flex items-center gap-3">
@@ -134,7 +135,8 @@ export default function LandingPage() {
             <button onClick={() => scrollTo("features")} className="block w-full text-left px-3 py-2 text-sm text-surface-600 hover:bg-surface-50 rounded-lg">Features</button>
             <button onClick={() => scrollTo("how-it-works")} className="block w-full text-left px-3 py-2 text-sm text-surface-600 hover:bg-surface-50 rounded-lg">How It Works</button>
             <button onClick={() => scrollTo("pricing")} className="block w-full text-left px-3 py-2 text-sm text-surface-600 hover:bg-surface-50 rounded-lg">Pricing</button>
-            <Link href="/docs" className="block w-full text-left px-3 py-2 text-sm text-surface-600 hover:bg-surface-50 rounded-lg">API</Link>
+            <Link href="/docs" className="block w-full text-left px-3 py-2 text-sm text-surface-600 hover:bg-surface-50 rounded-lg">Docs</Link>
+            <Link href="/developer/register" className="block w-full text-left px-3 py-2 text-sm text-surface-600 hover:bg-surface-50 rounded-lg">Developer API</Link>
             <hr className="border-surface-100" />
             <Link href="/login" className="block px-3 py-2 text-sm font-medium text-surface-700">Sign In</Link>
             <Link href="/register" className="block px-3 py-2.5 text-sm font-medium text-white bg-primary-600 rounded-xl text-center">Get Started Free</Link>
@@ -409,6 +411,7 @@ export default function LandingPage() {
                 <button onClick={() => scrollTo("features")} className="block text-sm text-surface-500 hover:text-surface-700 transition-colors">Features</button>
                 <button onClick={() => scrollTo("pricing")} className="block text-sm text-surface-500 hover:text-surface-700 transition-colors">Pricing</button>
                 <Link href="/docs" className="block text-sm text-surface-500 hover:text-surface-700 transition-colors">API / Docs</Link>
+                <Link href="/developer/register" className="block text-sm text-surface-500 hover:text-surface-700 transition-colors">Developer API</Link>
                 <Link href="/login" className="block text-sm text-surface-500 hover:text-surface-700 transition-colors">Sign In</Link>
                 <Link href="/register" className="block text-sm text-surface-500 hover:text-surface-700 transition-colors">Register</Link>
               </div>

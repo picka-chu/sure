@@ -13,7 +13,7 @@ pip install surepay
 ```python
 from surepay import Surepay
 
-client = Surepay(api_key="sk-your-api-key-here")
+client = Surepay(api_key="sk-your-api-key-here", base_url="https://sure1.onrender.com")
 
 # Verify a receipt image
 result = client.verify("receipt.jpg", bank_name="cbe")

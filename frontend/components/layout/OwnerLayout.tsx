@@ -16,6 +16,7 @@ import {
   CreditCard,
   Clock,
   AlertTriangle,
+  Key,
 } from "lucide-react";
 import { subscriptionApi } from "@/lib/api";
 
@@ -25,6 +26,7 @@ const navItems = [
   { href: "/owner/staff", label: "Staff", icon: Users },
   { href: "/owner/history", label: "History", icon: History },
   { href: "/owner/subscription", label: "Subscription", icon: CreditCard },
+  { href: "/owner/developer", label: "Developer", icon: Key },
   { href: "/owner/settings", label: "Settings", icon: Settings },
 ];
 

@@ -1,7 +1,9 @@
 import os
 import uuid
+import hashlib
 import logging
 import json
+from uuid import UUID
 from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request, Query
@@ -9,17 +11,63 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from app.database import get_db
 from app.middleware.api_key import get_api_client
+from app.middleware.auth import get_current_user, get_current_any
 from app.models.api_key import ApiKey, generate_api_key, hash_api_key
 from app.models.business import Business
 from app.models.bank import BankAccount, BankName
 from app.models.verification import Verification, VerificationStatus
+from app.models.user import User
 from app.schemas.developer import (
     ApiKeyCreateRequest, ApiKeyCreateResponse, ApiKeyListResponse,
     DeveloperVerifyResponse, DeveloperVerificationResponse, DeveloperVerificationListResponse,
+    DeveloperRegisterRequest, DeveloperRegisterResponse,
     ErrorResponse,
 )
 from app.services.verification_service import verify_receipt, detect_bank_from_url, detect_bank_from_text, extract_reference, extract_qr_from_image, extract_text_from_image, fetch_receipt_from_url, extract_with_gemini
+from app.services.auth_service import register_business
 from app.config import settings
+
+
+async def get_developer_auth(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> tuple[Business, str | None]:
+    from jose import JWTError, jwt
+    auth_header = request.headers.get("authorization")
+    api_key_header = request.headers.get("x-api-key")
+
+    if api_key_header:
+        key_hash = hashlib.sha256(api_key_header.encode()).hexdigest()
+        result = await db.execute(select(ApiKey).where(ApiKey.key_hash == key_hash))
+        key_obj = result.scalar_one_or_none()
+        if not key_obj or not key_obj.is_active:
+            raise HTTPException(status_code=401, detail="Invalid API key")
+        biz = await db.get(Business, key_obj.business_id)
+        if not biz or not biz.is_active:
+            raise HTTPException(status_code=403, detail="Business inactive")
+        key_obj.last_used_at = datetime.now(timezone.utc)
+        await db.flush()
+        return biz, key_obj.id
+
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header[7:]
+        try:
+            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+            user_id = payload.get("sub")
+            role = payload.get("role")
+            if not user_id or role not in ("owner", "staff"):
+                raise HTTPException(status_code=401, detail="Invalid token")
+        except JWTError:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        user = await db.get(User, UUID(user_id))
+        if not user or not user.is_active:
+            raise HTTPException(status_code=401, detail="User not found")
+        biz = await db.get(Business, user.business_id)
+        if not biz or not biz.is_active:
+            raise HTTPException(status_code=403, detail="Business inactive")
+        return biz, None
+
+    raise HTTPException(status_code=401, detail="Authentication required")
 
 logger = logging.getLogger("surepay.developer")
 
@@ -28,6 +76,56 @@ ALLOWED_MIME_PREFIXES = {"image/"}
 MAX_FILE_SIZE = 10 * 1024 * 1024
 
 router = APIRouter(prefix="/api/v1", tags=["Developer API"])
+
+
+# ─── Auth ───
+
+@router.post(
+    "/auth/register",
+    response_model=DeveloperRegisterResponse,
+    summary="Register a developer account",
+    description="Create a new business + owner account and get an API key immediately. The API key is returned only once — store it securely.",
+)
+async def developer_register(
+    body: DeveloperRegisterRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    from app.services.auth_service import register_business
+    try:
+        result = await register_business(
+            db,
+            business_name=body.business_name,
+            email=body.email,
+            password=body.password,
+            full_name=body.full_name,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    owner_user = result["user"]
+    business_id = owner_user["business_id"]
+
+    raw_key = generate_api_key()
+    key_hash = hash_api_key(raw_key)
+    key_prefix = raw_key[:10]
+
+    key = ApiKey(
+        business_id=UUID(business_id),
+        name="Default",
+        key_prefix=key_prefix,
+        key_hash=key_hash,
+    )
+    db.add(key)
+    await db.flush()
+    await db.refresh(key)
+
+    return DeveloperRegisterResponse(
+        message="Account created successfully",
+        api_key=raw_key,
+        api_key_id=key.id,
+        business_id=UUID(business_id),
+        business_name=body.business_name,
+    )
 
 
 # ─── Verification ───
@@ -352,10 +450,10 @@ async def developer_list_verifications(
 )
 async def developer_create_key(
     body: ApiKeyCreateRequest,
-    api_client: tuple = Depends(get_api_client),
+    auth: tuple = Depends(get_developer_auth),
     db: AsyncSession = Depends(get_db),
 ):
-    api_key_obj, business = api_client
+    business, _ = auth
     raw_key = generate_api_key()
     key_hash = hash_api_key(raw_key)
     key_prefix = raw_key[:10]
@@ -388,10 +486,10 @@ async def developer_create_key(
     description="List all API keys for your business. The full key is never returned — only the prefix for identification.",
 )
 async def developer_list_keys(
-    api_client: tuple = Depends(get_api_client),
+    auth: tuple = Depends(get_developer_auth),
     db: AsyncSession = Depends(get_db),
 ):
-    api_key_obj, business = api_client
+    business, _ = auth
     result = await db.execute(
         select(ApiKey).where(
             ApiKey.business_id == business.id,
@@ -420,10 +518,10 @@ async def developer_list_keys(
 )
 async def developer_revoke_key(
     key_id: uuid.UUID,
-    api_client: tuple = Depends(get_api_client),
+    auth: tuple = Depends(get_developer_auth),
     db: AsyncSession = Depends(get_db),
 ):
-    api_key_obj, business = api_client
+    business, _ = auth
     result = await db.execute(
         select(ApiKey).where(
             ApiKey.id == key_id,

@@ -4,7 +4,7 @@ export function getApiBase(): string {
   if (typeof window !== "undefined" && (window as any).__API_URL__) {
     return (window as any).__API_URL__;
   }
-  return "http://localhost:8000";
+  return "https://sure1.onrender.com";
 }
 
 let apiInstance: AxiosInstance | null = null;

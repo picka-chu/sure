@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from typing import Optional, Any, List
 from uuid import UUID
 from datetime import datetime
@@ -60,6 +60,32 @@ class DeveloperVerifyResponse(BaseModel):
 class DeveloperVerificationListResponse(BaseModel):
     verifications: List[DeveloperVerificationResponse]
     total: int
+
+
+class DeveloperRegisterRequest(BaseModel):
+    business_name: str = Field(..., min_length=1)
+    full_name: str = Field(..., min_length=1)
+    email: EmailStr
+    password: str = Field(..., min_length=8)
+
+    @field_validator("password")
+    @classmethod
+    def password_complexity(cls, v: str) -> str:
+        if not any(c.isupper() for c in v):
+            raise ValueError("Password must contain an uppercase letter")
+        if not any(c.islower() for c in v):
+            raise ValueError("Password must contain a lowercase letter")
+        if not any(c.isdigit() for c in v):
+            raise ValueError("Password must contain a digit")
+        return v
+
+
+class DeveloperRegisterResponse(BaseModel):
+    message: str
+    api_key: str
+    api_key_id: UUID
+    business_id: UUID
+    business_name: str
 
 
 class ErrorResponse(BaseModel):
