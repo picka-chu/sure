@@ -4,7 +4,7 @@ Surepay Python SDK — verify Ethiopian bank transfer receipts programmatically.
 Usage:
     from surepay import Surepay
 
-    client = Surepay(api_key="sk-...", base_url="https://api.surepay.et")
+    client = Surepay(api_key="sk-...", base_url="https://sure1.onrender.com")
 
     # Verify a receipt image
     result = client.verify("receipt.jpg", bank_name="cbe")

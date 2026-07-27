@@ -155,7 +155,7 @@ export default function DocsPage() {
                     </p>
                     <div className="grid sm:grid-cols-2 gap-4 mt-6">
                       {[
-                        { icon: Terminal, label: "Base URL", value: "https://api.surepay.et/api/v1" },
+                        { icon: Terminal, label: "Base URL", value: "https://sure1.onrender.com/api/v1" },
                         { icon: Key, label: "Auth", value: "X-API-Key header" },
                         { icon: Cpu, label: "Format", value: "JSON (REST)" },
                         { icon: Code2, label: "SDK", value: "Python (pip install surepay)" },
@@ -266,7 +266,7 @@ X-API-Key: sk-your-api-key-here`}
                   <h3 className="text-lg font-semibold text-surface-900 mb-2">Example (cURL)</h3>
                   <CodeBlock
                     id="curl-verify"
-                    code={`curl -X POST https://api.surepay.et/api/v1/verify \\
+                    code={`curl -X POST https://sure1.onrender.com/api/v1/verify \\
   -H "X-API-Key: sk-your-api-key" \\
   -F "file=@receipt.jpg" \\
   -F "bank_name=cbe"`}
@@ -337,7 +337,7 @@ X-API-Key: sk-your-api-key-here`}
                   <h3 className="text-lg font-semibold text-surface-900 mb-2">Example (cURL)</h3>
                   <CodeBlock
                     id="curl-verify-link"
-                    code={`curl -X POST https://api.surepay.et/api/v1/verify-link \\
+                    code={`curl -X POST https://sure1.onrender.com/api/v1/verify-link \\
   -H "X-API-Key: sk-your-api-key" \\
   -d "bank_name=cbe" \\
   -d "reference=FT25211G11JQ"`}
@@ -356,7 +356,7 @@ X-API-Key: sk-your-api-key-here`}
                   </p>
                   <CodeBlock
                     id="curl-get"
-                    code={`curl https://api.surepay.et/api/v1/verifications/550e8400-e29b-41d4-a716-446655440000 \\
+                    code={`curl https://sure1.onrender.com/api/v1/verifications/550e8400-e29b-41d4-a716-446655440000 \\
   -H "X-API-Key: sk-your-api-key"`}
                   />
                 </section>
@@ -400,7 +400,7 @@ X-API-Key: sk-your-api-key-here`}
 
                   <CodeBlock
                     id="curl-list"
-                    code={`curl "https://api.surepay.et/api/v1/verifications?limit=50&offset=0" \\
+                    code={`curl "https://sure1.onrender.com/api/v1/verifications?limit=50&offset=0" \\
   -H "X-API-Key: sk-your-api-key"`}
                   />
 
@@ -438,7 +438,7 @@ X-API-Key: sk-your-api-key-here`}
                     </div>
                     <CodeBlock
                       id="curl-create-key"
-                      code={`curl -X POST https://api.surepay.et/api/v1/keys \\
+                      code={`curl -X POST https://sure1.onrender.com/api/v1/keys \\
   -H "X-API-Key: sk-your-api-key" \\
   -H "Content-Type: application/json" \\
   -d '{"name": "My Production App"}'`}
@@ -459,7 +459,7 @@ X-API-Key: sk-your-api-key-here`}
                     </div>
                     <CodeBlock
                       id="curl-list-keys"
-                      code={`curl https://api.surepay.et/api/v1/keys \\
+                      code={`curl https://sure1.onrender.com/api/v1/keys \\
   -H "X-API-Key: sk-your-api-key"`}
                     />
                     <p className="text-sm text-surface-500 mt-2">Only the key prefix (e.g. <code className="font-mono">sk-aBcDeFgHiJ</code>) is returned. The full key is never exposed.</p>
@@ -473,7 +473,7 @@ X-API-Key: sk-your-api-key-here`}
                     </div>
                     <CodeBlock
                       id="curl-delete-key"
-                      code={`curl -X DELETE https://api.surepay.et/api/v1/keys/550e8400-e29b-41d4-a716-446655440000 \\
+                      code={`curl -X DELETE https://sure1.onrender.com/api/v1/keys/550e8400-e29b-41d4-a716-446655440000 \\
   -H "X-API-Key: sk-your-api-key"`}
                     />
                   </div>
