@@ -8,7 +8,8 @@ import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import AuthLayout from "@/components/layout/AuthLayout";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { supabase } from "@/lib/supabase";
+import { auth, googleProvider } from "@/lib/firebase";
+import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
 
 interface LoginForm {
   email: string;
@@ -32,23 +33,16 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     try {
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: data.email,
-        password: data.password,
-      });
-      if (authError) throw new Error(authError.message);
-      if (!authData.session) throw new Error("No session returned");
-
-      const token = authData.session.access_token;
-      const user = authData.user;
-      const metadata = user.user_metadata || {};
+      const cred = await signInWithEmailAndPassword(auth, data.email, data.password);
+      const token = await cred.user.getIdToken();
+      const metadata = cred.user.providerData[0] || {};
 
       localStorage.setItem("owner_token", token);
       localStorage.setItem("owner_user", JSON.stringify({
-        id: user.id,
-        email: user.email,
-        full_name: metadata.full_name || metadata.name || user.email?.split("@")[0],
-        business_name: metadata.business_name || "",
+        id: cred.user.uid,
+        email: cred.user.email,
+        full_name: cred.user.displayName || cred.user.email?.split("@")[0],
+        business_name: "",
       }));
 
       router.push("/owner");
@@ -63,15 +57,21 @@ export default function LoginPage() {
     setGoogleLoading(true);
     setError("");
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-      if (error) throw new Error(error.message);
+      const cred = await signInWithPopup(auth, googleProvider);
+      const token = await cred.user.getIdToken();
+
+      localStorage.setItem("owner_token", token);
+      localStorage.setItem("owner_user", JSON.stringify({
+        id: cred.user.uid,
+        email: cred.user.email,
+        full_name: cred.user.displayName || cred.user.email?.split("@")[0],
+        business_name: "",
+      }));
+
+      router.push("/owner");
     } catch (err: any) {
       setError(err.message);
+    } finally {
       setGoogleLoading(false);
     }
   };

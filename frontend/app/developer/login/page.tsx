@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, ShieldCheck, Check, Key } from "lucide-react";
 import Button from "@/components/ui/Button";
-import { supabase } from "@/lib/supabase";
+import { auth, googleProvider, githubProvider } from "@/lib/firebase";
+import { signInWithPopup } from "firebase/auth";
 
 export default function DeveloperLoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -13,21 +14,30 @@ export default function DeveloperLoginPage() {
   const [error, setError] = useState("");
   const router = useRouter();
 
-  const signInWith = async (provider: "google" | "github") => {
-    if (provider === "google") setGoogleLoading(true);
-    else setGithubLoading(true);
+  const afterAuth = async (user: any) => {
+    const token = await user.getIdToken();
+    localStorage.setItem("owner_token", token);
+    localStorage.setItem("owner_user", JSON.stringify({
+      id: user.uid,
+      email: user.email,
+      full_name: user.displayName || user.email?.split("@")[0],
+      business_name: "",
+    }));
+    router.push("/owner/developer");
+  };
+
+  const signInWith = async (provider: typeof googleProvider | typeof githubProvider, setLoading: (v: boolean) => void) => {
+    setLoading(true);
     setError("");
     try {
-      sessionStorage.setItem("auth_redirect", "/owner/developer");
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: { redirectTo: `${window.location.origin}/auth/callback` },
-      });
-      if (error) throw new Error(error.message);
+      const cred = await signInWithPopup(auth, provider);
+      await afterAuth(cred.user);
     } catch (err: any) {
-      setError(err.message);
-      if (provider === "google") setGoogleLoading(false);
-      else setGithubLoading(false);
+      if (err.code !== "auth/popup-closed-by-user") {
+        setError(err.message);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -89,7 +99,7 @@ export default function DeveloperLoginPage() {
 
             <button
               type="button"
-              onClick={() => signInWith("google")}
+              onClick={() => signInWith(googleProvider, setGoogleLoading)}
               disabled={googleLoading}
               className="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50"
             >
@@ -108,7 +118,7 @@ export default function DeveloperLoginPage() {
 
             <button
               type="button"
-              onClick={() => signInWith("github")}
+              onClick={() => signInWith(githubProvider, setGithubLoading)}
               disabled={githubLoading}
               className="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50"
             >

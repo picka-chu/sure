@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, s
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database import get_db
-from app.middleware.supabase_auth import get_current_user, get_current_staff, get_current_any
+from app.middleware.firebase_auth import get_current_user, get_current_staff, get_current_any
 from app.middleware.subscription import require_active_subscription
 from app.models.user import User
 from app.models.staff import StaffUser

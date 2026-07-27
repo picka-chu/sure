@@ -2,38 +2,37 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { auth } from "@/lib/firebase";
+import { getRedirectResult } from "firebase/auth";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const handleAuth = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      if (error || !data.session) {
+    const handleRedirect = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (!result || !result.user) {
+          router.push("/login");
+          return;
+        }
+        const token = await result.user.getIdToken();
+        localStorage.setItem("owner_token", token);
+        localStorage.setItem("owner_user", JSON.stringify({
+          id: result.user.uid,
+          email: result.user.email,
+          full_name: result.user.displayName || result.user.email?.split("@")[0],
+          business_name: "",
+        }));
+
+        const redirectTo = sessionStorage.getItem("auth_redirect") || "/owner";
+        sessionStorage.removeItem("auth_redirect");
+        router.push(redirectTo);
+      } catch {
         router.push("/login");
-        return;
       }
-
-      const token = data.session.access_token;
-      const user = data.session.user;
-      const metadata = user.user_metadata || {};
-      const email = user.email || "";
-
-      localStorage.setItem("owner_token", token);
-      localStorage.setItem("owner_user", JSON.stringify({
-        id: user.id,
-        email,
-        full_name: metadata.full_name || metadata.name || email.split("@")[0],
-        business_name: metadata.business_name || `${metadata.name || email.split("@")[0]}'s Business`,
-      }));
-
-      const redirectTo = sessionStorage.getItem("auth_redirect") || "/owner";
-      sessionStorage.removeItem("auth_redirect");
-      router.push(redirectTo);
     };
-
-    handleAuth();
+    handleRedirect();
   }, [router]);
 
   return (

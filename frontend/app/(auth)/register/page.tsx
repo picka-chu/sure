@@ -17,7 +17,8 @@ import {
 import AuthLayout from "@/components/layout/AuthLayout";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { supabase } from "@/lib/supabase";
+import { auth, googleProvider } from "@/lib/firebase";
+import { createUserWithEmailAndPassword, signInWithPopup, updateProfile } from "firebase/auth";
 
 interface RegisterForm {
   business_name: string;
@@ -42,40 +43,26 @@ export default function RegisterPage() {
     formState: { errors },
   } = useForm<RegisterForm>();
 
+  const afterAuth = async (user: any, fullName?: string) => {
+    const token = await user.getIdToken();
+    localStorage.setItem("owner_token", token);
+    localStorage.setItem("owner_user", JSON.stringify({
+      id: user.uid,
+      email: user.email,
+      full_name: fullName || user.displayName || user.email?.split("@")[0],
+      business_name: "",
+    }));
+    localStorage.setItem("show_welcome_trial", "true");
+    router.push("/owner");
+  };
+
   const onSubmit = async (data: RegisterForm) => {
     setLoading(true);
     setError("");
     try {
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          data: {
-            full_name: data.full_name,
-            business_name: data.business_name,
-            phone: data.phone || undefined,
-          },
-        },
-      });
-      if (authError) throw new Error(authError.message);
-      if (!authData.session) {
-        setError("Check your email for the confirmation link.");
-        return;
-      }
-
-      const token = authData.session.access_token;
-      const user = authData.user;
-
-      localStorage.setItem("owner_token", token);
-      localStorage.setItem("owner_user", JSON.stringify({
-        id: user?.id,
-        email: data.email,
-        full_name: data.full_name,
-        business_name: data.business_name,
-        phone: data.phone,
-      }));
-      localStorage.setItem("show_welcome_trial", "true");
-      router.push("/owner");
+      const cred = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      await updateProfile(cred.user, { displayName: data.full_name });
+      await afterAuth(cred.user, data.full_name);
     } catch (err: any) {
       setError(err.message || "Registration failed");
     } finally {
@@ -87,15 +74,11 @@ export default function RegisterPage() {
     setGoogleLoading(true);
     setError("");
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-        },
-      });
-      if (error) throw new Error(error.message);
+      const cred = await signInWithPopup(auth, googleProvider);
+      await afterAuth(cred.user);
     } catch (err: any) {
       setError(err.message);
+    } finally {
       setGoogleLoading(false);
     }
   };

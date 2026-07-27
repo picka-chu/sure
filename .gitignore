@@ -13,4 +13,6 @@ uploads/*
 .DS_Store
 
 ethiobank_receipts_source/
+firebase-service-account.json
+
 

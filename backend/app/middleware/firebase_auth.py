@@ -1,4 +1,4 @@
-import httpx
+import firebase_admin
 import logging
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -12,48 +12,36 @@ from app.models.staff import StaffUser
 from datetime import datetime, timezone, timedelta
 from uuid import UUID
 from typing import Union
+from firebase_admin import auth as firebase_auth, credentials
 
 security = HTTPBearer(auto_error=False)
 
-logger = logging.getLogger("surepay.supabase_auth")
+logger = logging.getLogger("surepay.firebase_auth")
+
+if not firebase_admin._apps:
+    cred = credentials.Certificate(settings.FIREBASE_SERVICE_ACCOUNT_PATH)
+    firebase_admin.initialize_app(cred)
 
 
-async def _verify_supabase_token(token: str) -> dict | None:
-    try:
-        async with httpx.AsyncClient(timeout=10) as client:
-            resp = await client.get(
-                f"{settings.SUPABASE_URL}/auth/v1/user",
-                headers={"Authorization": f"Bearer {token}"},
-            )
-            if resp.status_code == 200:
-                return resp.json()
-    except Exception as e:
-        logger.error(f"Supabase token verification failed: {e}")
-    return None
-
-
-async def _find_or_create_user_from_supabase(
-    db: AsyncSession, supabase_user: dict, role: str = "owner"
+async def _find_or_create_user_from_firebase(
+    db: AsyncSession, fb_user: dict, role: str = "owner"
 ) -> User:
-    email = supabase_user.get("email") or supabase_user.get("id")
+    email = fb_user.get("email") or fb_user.get("uid")
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
     if user:
         return user
 
-    app_metadata = supabase_user.get("app_metadata", {})
-    user_metadata = supabase_user.get("user_metadata", {})
     full_name = (
-        user_metadata.get("full_name")
-        or user_metadata.get("name")
+        fb_user.get("name")
         or email.split("@")[0]
     )
-    business_name = user_metadata.get("business_name") or f"{full_name}'s Business"
+    business_name = f"{full_name}'s Business"
 
     business = Business(
         name=business_name,
         email=email,
-        phone=user_metadata.get("phone"),
+        phone=fb_user.get("phone_number"),
         subscription_status=SubscriptionStatus.TRIAL,
         trial_end_date=datetime.now(timezone.utc) + timedelta(days=7),
     )
@@ -66,11 +54,11 @@ async def _find_or_create_user_from_supabase(
         full_name=full_name,
         role=role,
     )
-    user.set_password(UUID(supabase_user["id"]).hex)
+    user.set_password(UUID(fb_user["uid"]).hex)
     db.add(user)
     await db.flush()
 
-    logger.info(f"Created user+business from Supabase auth: email={email}, business={business.id}")
+    logger.info(f"Created user+business from Firebase auth: email={email}, business={business.id}")
     return user
 
 
@@ -82,9 +70,11 @@ async def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     token = credentials.credentials
 
-    supabase_user = await _verify_supabase_token(token)
-    if supabase_user:
-        return await _find_or_create_user_from_supabase(db, supabase_user, role="owner")
+    try:
+        decoded = firebase_auth.verify_id_token(token)
+        return await _find_or_create_user_from_firebase(db, decoded, role="owner")
+    except Exception:
+        pass
 
     from jose import JWTError, jwt
     try:
@@ -136,9 +126,11 @@ async def get_current_any(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     token = credentials.credentials
 
-    supabase_user = await _verify_supabase_token(token)
-    if supabase_user:
-        return await _find_or_create_user_from_supabase(db, supabase_user, role="owner")
+    try:
+        decoded = firebase_auth.verify_id_token(token)
+        return await _find_or_create_user_from_firebase(db, decoded, role="owner")
+    except Exception:
+        pass
 
     from jose import JWTError, jwt
     try:
@@ -157,7 +149,7 @@ async def get_current_any(
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
         return user
     else:
-        result = await db.execute(select(StaffUser).where(StaffUser.id == UUID(user_id)))
+        result = await db.execute(select(StaffUser).where(StaffUser.id == UUID(staff_id)))
         staff = result.scalar_one_or_none()
         if staff is None or not staff.is_active:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Staff not found or inactive")
@@ -172,13 +164,15 @@ async def get_current_admin(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     token = credentials.credentials
 
-    supabase_user = await _verify_supabase_token(token)
-    if supabase_user:
-        user = await _find_or_create_user_from_supabase(db, supabase_user, role="super_admin")
+    try:
+        decoded = firebase_auth.verify_id_token(token)
+        user = await _find_or_create_user_from_firebase(db, decoded, role="super_admin")
         if not user.is_super_admin:
             user.is_super_admin = True
             await db.flush()
         return user
+    except Exception:
+        pass
 
     from jose import JWTError, jwt
     try:
