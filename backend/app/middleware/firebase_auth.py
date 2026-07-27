@@ -1,3 +1,4 @@
+import json
 import firebase_admin
 import logging
 from fastapi import Depends, HTTPException, status
@@ -19,7 +20,10 @@ security = HTTPBearer(auto_error=False)
 logger = logging.getLogger("surepay.firebase_auth")
 
 if not firebase_admin._apps:
-    cred = credentials.Certificate(settings.FIREBASE_SERVICE_ACCOUNT_PATH)
+    if settings.FIREBASE_SERVICE_ACCOUNT_JSON:
+        cred = credentials.Certificate(json.loads(settings.FIREBASE_SERVICE_ACCOUNT_JSON))
+    else:
+        cred = credentials.Certificate(settings.FIREBASE_SERVICE_ACCOUNT_PATH)
     firebase_admin.initialize_app(cred)
 
 
