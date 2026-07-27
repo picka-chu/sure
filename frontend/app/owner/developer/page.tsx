@@ -3,10 +3,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
-  Key, Plus, Copy, Check, X, Trash2, ShieldCheck, Activity,
-  Clock, ExternalLink, ChevronRight, Search, RefreshCw,
-  Terminal, Book, Settings, BarChart3, Code2, Download,
-  AlertCircle, CheckCircle, XCircle, Loader2,
+  Key, Plus, Copy, Check, X, ShieldCheck, Activity,
+  Clock, ExternalLink, ChevronRight,
+  Terminal, Book, Settings, BarChart3, Code2, CreditCard,
+  AlertCircle, CheckCircle, XCircle, Loader2, TrendingUp,
+  TrendingDown, Banknote, Zap, Calendar,
 } from "lucide-react";
 import { getApiBase } from "@/lib/api";
 
@@ -24,12 +25,41 @@ interface VerificationItem {
   created_at: string;
 }
 
-type Tab = "keys" | "verifications" | "docs" | "settings";
+interface DailyStat {
+  date: string; total: number; verified: number;
+  scam: number; pending: number;
+}
+
+interface AnalyticsData {
+  total_verifications: number; verified_today: number;
+  scam_today: number; scam_rate: number;
+  total_scans_today: number;
+  recent_verifications: any[];
+  daily_stats: DailyStat[];
+  bank_breakdown: Record<string, number>;
+}
+
+interface SubscriptionStatus {
+  status: string; plan: string; days_remaining: number;
+  is_active: boolean; trial_end_date: string | null;
+  subscription_start_date: string | null;
+  subscription_end_date: string | null;
+}
+
+interface PaymentRecord {
+  id: string; plan_type: string; amount: number;
+  currency: string; payment_method: string; status: string;
+  created_at: string;
+}
+
+type Tab = "keys" | "analytics" | "verifications" | "docs" | "billing" | "settings";
 
 const tabs: { id: Tab; label: string; icon: typeof Key }[] = [
   { id: "keys", label: "API Keys", icon: Key },
+  { id: "analytics", label: "Analytics", icon: BarChart3 },
   { id: "verifications", label: "Verifications", icon: Activity },
   { id: "docs", label: "Quick Start", icon: Book },
+  { id: "billing", label: "Billing", icon: CreditCard },
   { id: "settings", label: "Settings", icon: Settings },
 ];
 
@@ -55,19 +85,16 @@ export default function DeveloperDashboard() {
       <TopBar user={user} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
       <div className="flex">
-        <Sidebar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
-          open={sidebarOpen}
-          setOpen={setSidebarOpen}
-        />
+        <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} open={sidebarOpen} setOpen={setSidebarOpen} />
 
         <main className="flex-1 min-w-0 lg:ml-64">
           <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-6xl mx-auto">
             {activeTab === "keys" && <ApiKeysSection token={token} />}
+            {activeTab === "analytics" && <AnalyticsSection token={token} />}
             {activeTab === "verifications" && <VerificationsSection token={token} />}
             {activeTab === "docs" && <DocsSection token={token} />}
-            {activeTab === "settings" && <SettingsSection token={token} user={user} />}
+            {activeTab === "billing" && <BillingSection token={token} user={user} />}
+            {activeTab === "settings" && <SettingsSection user={user} />}
           </div>
         </main>
       </div>
@@ -304,21 +331,17 @@ function ApiKeysSection({ token }: { token: string }) {
           {activeKeys.length > 0 && (
             <div>
               <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Active ({activeKeys.length})</h3>
-              <div className="space-y-2">
-                {activeKeys.map((key) => (
-                  <KeyCard key={key.id} keyItem={key} onRevoke={revokeKey} revoking={revoking === key.id} />
-                ))}
-              </div>
+              <div className="space-y-2">{activeKeys.map((key) => (
+                <KeyCard key={key.id} keyItem={key} onRevoke={revokeKey} revoking={revoking === key.id} />
+              ))}</div>
             </div>
           )}
           {revokedKeys.length > 0 && (
             <div>
               <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Revoked ({revokedKeys.length})</h3>
-              <div className="space-y-2">
-                {revokedKeys.map((key) => (
-                  <KeyCard key={key.id} keyItem={key} onRevoke={revokeKey} revoking={false} />
-                ))}
-              </div>
+              <div className="space-y-2">{revokedKeys.map((key) => (
+                <KeyCard key={key.id} keyItem={key} onRevoke={revokeKey} revoking={false} />
+              ))}</div>
             </div>
           )}
         </div>
@@ -366,6 +389,119 @@ function KeyCard({ keyItem, onRevoke, revoking }: { keyItem: ApiKeyItem; onRevok
   );
 }
 
+function AnalyticsSection({ token }: { token: string }) {
+  const [data, setData] = useState<AnalyticsData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const apiHeaders = useCallback(() => ({ "Authorization": `Bearer ${token}` }), [token]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${getApiBase()}/api/analytics/dashboard`, { headers: apiHeaders() });
+        if (res.ok) setData(await res.json());
+        else setError("Failed to load analytics");
+      } catch { setError("Network error"); }
+      finally { setLoading(false); }
+    })();
+  }, [apiHeaders]);
+
+  if (loading) return <div className="flex items-center justify-center py-20 text-gray-400"><Loader2 size={20} className="animate-spin mr-2" /> Loading...</div>;
+  if (error) return <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-100 text-sm text-red-700"><AlertCircle size={15} /> {error}</div>;
+  if (!data) return null;
+
+  const maxDaily = Math.max(...data.daily_stats.map(d => d.total), 1);
+  const banks = Object.entries(data.bank_breakdown || {}).sort((a, b) => b[1] - a[1]);
+  const maxBank = Math.max(...banks.map(([, c]) => c), 1);
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h1 className="text-xl font-bold text-gray-900">Usage Analytics</h1>
+        <p className="text-sm text-gray-500 mt-0.5">Real-time metrics and historical usage trends.</p>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <StatCard icon={Activity} label="Total Verifications" value={data.total_verifications.toLocaleString()} color="text-[#115ce9]" bg="bg-blue-50" />
+        <StatCard icon={Zap} label="Scans Today" value={data.total_scans_today.toLocaleString()} color="text-amber-600" bg="bg-amber-50" />
+        <StatCard icon={CheckCircle} label="Verified Today" value={data.verified_today.toLocaleString()} color="text-emerald-600" bg="bg-emerald-50" />
+        <StatCard icon={data.scam_rate > 20 ? TrendingDown : TrendingUp} label="Scam Rate" value={`${data.scam_rate}%`} color={data.scam_rate > 20 ? "text-red-600" : "text-emerald-600"} bg={data.scam_rate > 20 ? "bg-red-50" : "bg-emerald-50"} />
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-5">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">Daily Verifications (30 days)</h3>
+          {data.daily_stats.length === 0 ? (
+            <p className="text-xs text-gray-400 text-center py-8">No data yet</p>
+          ) : (
+            <div className="flex items-end gap-1 h-40">
+              {data.daily_stats.map((d) => {
+                const pct = (d.total / maxDaily) * 100;
+                const isToday = d.date === new Date().toISOString().slice(0, 10);
+                return (
+                  <div key={d.date} className="flex-1 flex flex-col items-center gap-1 group relative">
+                    <div className="w-full flex flex-col-reverse" style={{ height: `${Math.max(pct, 2)}%` }}>
+                      {d.verified > 0 && <div className="w-full bg-emerald-400 rounded-t" style={{ height: `${(d.verified / d.total) * 100}%` }} />}
+                      {d.scam > 0 && <div className="w-full bg-red-400" style={{ height: `${(d.scam / d.total) * 100}%` }} />}
+                      {d.pending > 0 && <div className="w-full bg-gray-300" style={{ height: `${(d.pending / d.total) * 100}%` }} />}
+                      {d.total === 0 && <div className="w-full bg-gray-100 rounded-t" style={{ height: "100%" }} />}
+                    </div>
+                    <span className={`text-[8px] ${isToday ? "text-[#115ce9] font-semibold" : "text-gray-400"}`}>
+                      {new Date(d.date).getDate()}
+                    </span>
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-2 py-1 rounded hidden group-hover:block whitespace-nowrap z-10">
+                      {d.date}: {d.total} ({d.verified} verified, {d.scam} scam)
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          <div className="flex items-center gap-4 mt-4 text-[11px] text-gray-500">
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-emerald-400" /> Verified</span>
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-red-400" /> Scam</span>
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-gray-300" /> Pending</span>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">Bank Breakdown</h3>
+          {banks.length === 0 ? (
+            <p className="text-xs text-gray-400 text-center py-8">No data yet</p>
+          ) : (
+            <div className="space-y-3">
+              {banks.map(([bank, count]) => (
+                <div key={bank}>
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="font-medium text-gray-700 capitalize">{bank}</span>
+                    <span className="text-gray-500">{count}</span>
+                  </div>
+                  <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-[#115ce9] rounded-full transition-all" style={{ width: `${(count / maxBank) * 100}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ icon: Icon, label, value, color, bg }: { icon: any; label: string; value: string; color: string; bg: string }) {
+  return (
+    <div className={`${bg} rounded-xl p-4`}>
+      <div className="flex items-center gap-2 mb-1">
+        <Icon size={14} className={color} />
+        <p className="text-[11px] font-medium text-gray-500">{label}</p>
+      </div>
+      <p className={`text-xl font-bold ${color}`}>{value}</p>
+    </div>
+  );
+}
+
 function VerificationsSection({ token }: { token: string }) {
   const [items, setItems] = useState<VerificationItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -391,11 +527,7 @@ function VerificationsSection({ token }: { token: string }) {
 
   useEffect(() => { fetchVerifications(); }, [fetchVerifications]);
 
-  const stats = {
-    total: total,
-    verified: items.filter(i => i.is_verified).length,
-    failed: items.filter(i => !i.is_verified).length,
-  };
+  const stats = { total, verified: items.filter(i => i.is_verified).length, failed: items.filter(i => !i.is_verified).length };
 
   return (
     <div>
@@ -417,21 +549,13 @@ function VerificationsSection({ token }: { token: string }) {
         ))}
       </div>
 
-      {error && (
-        <div className="flex items-center gap-2 p-3 mb-4 rounded-lg bg-red-50 border border-red-100 text-sm text-red-700">
-          <AlertCircle size={15} /> {error}
-        </div>
-      )}
+      {error && <div className="flex items-center gap-2 p-3 mb-4 rounded-lg bg-red-50 border border-red-100 text-sm text-red-700"><AlertCircle size={15} /> {error}</div>}
 
       {loading ? (
-        <div className="flex items-center justify-center py-20 text-gray-400">
-          <Loader2 size={20} className="animate-spin mr-2" /> Loading...
-        </div>
+        <div className="flex items-center justify-center py-20 text-gray-400"><Loader2 size={20} className="animate-spin mr-2" /> Loading...</div>
       ) : items.length === 0 ? (
         <div className="text-center py-20 border-2 border-dashed border-gray-200 rounded-xl">
-          <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-            <Activity size={22} className="text-gray-400" />
-          </div>
+          <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-4"><Activity size={22} className="text-gray-400" /></div>
           <p className="text-sm font-medium text-gray-900">No verifications yet</p>
           <p className="text-xs text-gray-500 mt-1">Use your API key to make your first verification.</p>
         </div>
@@ -460,11 +584,7 @@ function VerificationsSection({ token }: { token: string }) {
                       </div>
                     </div>
                   </div>
-                  {v.reason && (
-                    <div className="hidden md:block max-w-xs text-right">
-                      <p className="text-[11px] text-gray-400 leading-tight">{v.reason}</p>
-                    </div>
-                  )}
+                  {v.reason && <div className="hidden md:block max-w-xs text-right"><p className="text-[11px] text-gray-400 leading-tight">{v.reason}</p></div>}
                 </div>
               </div>
             ))}
@@ -473,12 +593,10 @@ function VerificationsSection({ token }: { token: string }) {
           {total > limit && (
             <div className="flex items-center justify-center gap-2 mt-6">
               <button disabled={page === 0} onClick={() => setPage(p => p - 1)}
-                className="px-3 py-1.5 rounded-lg text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-30 transition-colors"
-              >Previous</button>
+                className="px-3 py-1.5 rounded-lg text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-30 transition-colors">Previous</button>
               <span className="text-xs text-gray-400">Page {page + 1} of {Math.ceil(total / limit)}</span>
               <button disabled={(page + 1) * limit >= total} onClick={() => setPage(p => p + 1)}
-                className="px-3 py-1.5 rounded-lg text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-30 transition-colors"
-              >Next</button>
+                className="px-3 py-1.5 rounded-lg text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-30 transition-colors">Next</button>
             </div>
           )}
         </>
@@ -518,11 +636,7 @@ console.log("Verified:", result.isVerified);`;
   };
 
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
-  const handleCopy = (code: string, idx: number) => {
-    copyCode(code);
-    setCopiedIdx(idx);
-    setTimeout(() => setCopiedIdx(null), 2000);
-  };
+  const handleCopy = (code: string, idx: number) => { copyCode(code); setCopiedIdx(idx); setTimeout(() => setCopiedIdx(null), 2000); };
 
   return (
     <div>
@@ -533,24 +647,14 @@ console.log("Verified:", result.isVerified);`;
 
       <div className="grid lg:grid-cols-2 gap-4 mb-6">
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="flex items-center gap-2 mb-1">
-            <Terminal size={15} className="text-[#115ce9]" />
-            <h3 className="text-sm font-semibold text-gray-900">1. Install the SDK</h3>
-          </div>
+          <div className="flex items-center gap-2 mb-1"><Terminal size={15} className="text-[#115ce9]" /><h3 className="text-sm font-semibold text-gray-900">1. Install the SDK</h3></div>
           <p className="text-xs text-gray-500 mb-3">Python package for easy integration.</p>
-          <div className="bg-gray-900 rounded-lg p-3">
-            <code className="text-xs text-green-400 font-mono">pip install surepay-sdk</code>
-          </div>
+          <div className="bg-gray-900 rounded-lg p-3"><code className="text-xs text-green-400 font-mono">pip install surepay-sdk</code></div>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <div className="flex items-center gap-2 mb-1">
-            <Key size={15} className="text-[#115ce9]" />
-            <h3 className="text-sm font-semibold text-gray-900">2. Get your API key</h3>
-          </div>
+          <div className="flex items-center gap-2 mb-1"><Key size={15} className="text-[#115ce9]" /><h3 className="text-sm font-semibold text-gray-900">2. Get your API key</h3></div>
           <p className="text-xs text-gray-500 mb-3">Create a key in the API Keys tab above.</p>
-          <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
-            <code className="text-xs text-gray-600 font-mono">Replace YOUR_API_KEY with your key</code>
-          </div>
+          <div className="bg-gray-50 rounded-lg p-3 border border-gray-100"><code className="text-xs text-gray-600 font-mono">Replace YOUR_API_KEY with your key</code></div>
         </div>
       </div>
 
@@ -562,13 +666,9 @@ console.log("Verified:", result.isVerified);`;
         ].map((snippet, idx) => (
           <div key={snippet.label} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
-              <div className="flex items-center gap-2">
-                <Code2 size={14} className="text-gray-400" />
-                <span className="text-xs font-medium text-gray-600">{snippet.label}</span>
-              </div>
+              <div className="flex items-center gap-2"><Code2 size={14} className="text-gray-400" /><span className="text-xs font-medium text-gray-600">{snippet.label}</span></div>
               <button onClick={() => handleCopy(snippet.code, idx)}
-                className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors"
-              >
+                className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors">
                 {copiedIdx === idx ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
               </button>
             </div>
@@ -578,9 +678,7 @@ console.log("Verified:", result.isVerified);`;
       </div>
 
       <div className="mt-6 text-center">
-        <a href="/docs"
-          className="inline-flex items-center gap-1.5 text-sm text-[#115ce9] font-medium hover:text-[#0f4fce] transition-colors"
-        >
+        <a href="/docs" className="inline-flex items-center gap-1.5 text-sm text-[#115ce9] font-medium hover:text-[#0f4fce] transition-colors">
           View full API documentation <ExternalLink size={14} />
         </a>
       </div>
@@ -588,7 +686,142 @@ console.log("Verified:", result.isVerified);`;
   );
 }
 
-function SettingsSection({ token, user }: { token: string; user: any }) {
+function BillingSection({ token, user }: { token: string; user: any }) {
+  const [sub, setSub] = useState<SubscriptionStatus | null>(null);
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  const apiHeaders = useCallback(() => ({ "Authorization": `Bearer ${token}` }), [token]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [subRes, payRes] = await Promise.all([
+          fetch(`${getApiBase()}/api/subscription/status`, { headers: apiHeaders() }),
+          fetch(`${getApiBase()}/api/subscription/payments`, { headers: apiHeaders() }),
+        ]);
+        if (subRes.ok) setSub(await subRes.json());
+        if (payRes.ok) setPayments(await payRes.json());
+      } catch { setError("Failed to load billing data"); }
+      finally { setLoading(false); }
+    })();
+  }, [apiHeaders]);
+
+  if (loading) return <div className="flex items-center justify-center py-20 text-gray-400"><Loader2 size={20} className="animate-spin mr-2" /> Loading...</div>;
+
+  const planLabel = (p?: string) => ({ monthly: "Monthly", yearly: "Yearly", trial: "Trial", none: "No Plan", expired: "Expired" })[p || "none"] || p || "—";
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h1 className="text-xl font-bold text-gray-900">Billing & Subscription</h1>
+        <p className="text-sm text-gray-500 mt-0.5">Manage your plan, view payment history, and monitor usage.</p>
+      </div>
+
+      {error && <div className="flex items-center gap-2 p-3 mb-4 rounded-lg bg-red-50 border border-red-100 text-sm text-red-700"><AlertCircle size={15} /> {error}</div>}
+
+      <div className="grid lg:grid-cols-3 gap-6 mb-6">
+        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-5">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">Current Plan</h3>
+          {sub ? (
+            <div className="flex items-start gap-4">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${sub.is_active ? "bg-emerald-50" : sub.status === "expired" ? "bg-red-50" : "bg-gray-100"}`}>
+                <CreditCard size={20} className={sub.is_active ? "text-emerald-600" : sub.status === "expired" ? "text-red-500" : "text-gray-400"} />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-lg font-bold text-gray-900">{planLabel(sub.plan)}</p>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                    sub.is_active ? "bg-emerald-50 text-emerald-700" : sub.status === "expired" ? "bg-red-50 text-red-700" : "bg-gray-100 text-gray-600"
+                  }`}>
+                    {sub.is_active ? "Active" : sub.status === "trial" ? "Trial" : sub.status}
+                  </span>
+                </div>
+                {sub.is_active && sub.days_remaining > 0 && (
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <Calendar size={12} />
+                    {sub.subscription_end_date ? (
+                      <span>Renews {new Date(sub.subscription_end_date).toLocaleDateString()} ({sub.days_remaining} days remaining)</span>
+                    ) : sub.trial_end_date ? (
+                      <span>Trial ends {new Date(sub.trial_end_date).toLocaleDateString()} ({sub.days_remaining} days remaining)</span>
+                    ) : null}
+                  </div>
+                )}
+                {!sub.is_active && (
+                  <button className="mt-3 px-4 py-1.5 bg-[#115ce9] text-white text-xs font-medium rounded-lg hover:bg-[#0f4fce] transition-colors">
+                    Upgrade Plan
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400 py-4">Unable to load subscription status</p>
+          )}
+        </div>
+
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h3 className="text-sm font-semibold text-gray-900 mb-3">Usage This Period</h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-500">API Calls</span>
+              <span className="text-sm font-semibold text-gray-900">—</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-500">Verifications</span>
+              <span className="text-sm font-semibold text-gray-900">—</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-500">Rate Limit</span>
+              <span className="text-sm font-semibold text-gray-900">60 req/min</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">Payment History</h3>
+        {payments.length === 0 ? (
+          <p className="text-xs text-gray-400 text-center py-8">No payments yet</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="text-left font-medium text-gray-500 pb-2">Date</th>
+                  <th className="text-left font-medium text-gray-500 pb-2">Plan</th>
+                  <th className="text-left font-medium text-gray-500 pb-2">Method</th>
+                  <th className="text-right font-medium text-gray-500 pb-2">Amount</th>
+                  <th className="text-right font-medium text-gray-500 pb-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {payments.map((p) => (
+                  <tr key={p.id} className="border-b border-gray-50">
+                    <td className="py-2.5 text-gray-700">{new Date(p.created_at).toLocaleDateString()}</td>
+                    <td className="py-2.5 capitalize text-gray-700">{p.plan_type}</td>
+                    <td className="py-2.5 uppercase text-gray-700">{p.payment_method}</td>
+                    <td className="py-2.5 text-right text-gray-700">{p.amount.toLocaleString()} {p.currency}</td>
+                    <td className="py-2.5 text-right">
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                        p.status === "verified" ? "bg-emerald-50 text-emerald-700" :
+                        p.status === "pending" ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-700"
+                      }`}>
+                        {p.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SettingsSection({ user }: { user: any }) {
   return (
     <div>
       <div className="mb-6">
