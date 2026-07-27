@@ -25,7 +25,8 @@ export default function DeveloperLoginPage() {
         business_name: "",
       }));
 
-      router.push("/owner/developer");
+      sessionStorage.setItem("just_signed_up", "true");
+      router.push("/developer/onboarding");
     } catch (err: any) {
       if (err.code !== "auth/popup-closed-by-user") {
         setError(err.message);
