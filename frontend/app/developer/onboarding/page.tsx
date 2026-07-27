@@ -23,6 +23,10 @@ export default function DeveloperOnboardingPage() {
     }
     const user = JSON.parse(localStorage.getItem("owner_user") || "{}");
     if (user.full_name) setName(user.full_name);
+
+    if (!sessionStorage.getItem("just_signed_up") && user.business_name) {
+      router.push("/owner/developer");
+    }
   }, [router]);
 
   const handleSubmit = async () => {
@@ -34,7 +38,7 @@ export default function DeveloperOnboardingPage() {
     user.business_name = org.trim();
     user.full_name = name.trim() || user.full_name;
     localStorage.setItem("owner_user", JSON.stringify(user));
-    localStorage.setItem("show_welcome_trial", "true");
+    sessionStorage.removeItem("just_signed_up");
     router.push("/owner/developer");
   };
 
