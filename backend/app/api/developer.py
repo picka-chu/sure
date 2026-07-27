@@ -20,7 +20,7 @@ from app.models.user import User
 from app.schemas.developer import (
     ApiKeyCreateRequest, ApiKeyCreateResponse, ApiKeyListResponse,
     DeveloperVerifyResponse, DeveloperVerificationResponse, DeveloperVerificationListResponse,
-    DeveloperRegisterRequest, DeveloperRegisterResponse,
+    DeveloperRegisterRequest,
     ErrorResponse,
 )
 from app.services.verification_service import verify_receipt, detect_bank_from_url, detect_bank_from_text, extract_reference, extract_qr_from_image, extract_text_from_image, fetch_receipt_from_url, extract_with_gemini
@@ -82,9 +82,8 @@ router = APIRouter(prefix="/api/v1", tags=["Developer API"])
 
 @router.post(
     "/auth/register",
-    response_model=DeveloperRegisterResponse,
     summary="Register a developer account",
-    description="Create a new business + owner account and get an API key immediately. The API key is returned only once — store it securely.",
+    description="Create a new business + owner account. Sign in to the dashboard to create API keys.",
 )
 async def developer_register(
     body: DeveloperRegisterRequest,
@@ -102,30 +101,7 @@ async def developer_register(
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-    owner_user = result["user"]
-    business_id = owner_user["business_id"]
-
-    raw_key = generate_api_key()
-    key_hash = hash_api_key(raw_key)
-    key_prefix = raw_key[:10]
-
-    key = ApiKey(
-        business_id=UUID(business_id),
-        name="Default",
-        key_prefix=key_prefix,
-        key_hash=key_hash,
-    )
-    db.add(key)
-    await db.flush()
-    await db.refresh(key)
-
-    return DeveloperRegisterResponse(
-        message="Account created successfully",
-        api_key=raw_key,
-        api_key_id=key.id,
-        business_id=UUID(business_id),
-        business_name=body.business_name,
-    )
+    return result
 
 
 # ─── Verification ───

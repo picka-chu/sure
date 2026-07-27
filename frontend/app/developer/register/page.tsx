@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
-import { Key, Mail, Lock, User, Building2, Eye, EyeOff, Copy, Check, ShieldCheck, AlertTriangle, ArrowLeft, ExternalLink } from "lucide-react";
+import { Key, Mail, Lock, User, Building2, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { getApiBase } from "@/lib/api";
@@ -17,9 +17,14 @@ interface DevRegisterForm {
 }
 
 interface SuccessResult {
-  api_key: string;
-  business_name: string;
-  business_id: string;
+  access_token: string;
+  user: {
+    id: string;
+    email: string;
+    full_name: string;
+    business_id: string;
+    business_name: string;
+  };
 }
 
 export default function DeveloperRegisterPage() {
@@ -27,7 +32,6 @@ export default function DeveloperRegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState<SuccessResult | null>(null);
-  const [copied, setCopied] = useState(false);
   const router = useRouter();
 
   const {
@@ -50,32 +54,17 @@ export default function DeveloperRegisterPage() {
         setError(body.detail || "Registration failed");
         return;
       }
+      localStorage.setItem("owner_token", body.access_token);
+      localStorage.setItem("owner_user", JSON.stringify(body.user));
       setSuccess({
-        api_key: body.api_key,
-        business_name: body.business_name,
-        business_id: body.business_id,
+        access_token: body.access_token,
+        user: body.user,
       });
     } catch {
       setError("Network error. Please check your connection.");
     } finally {
       setLoading(false);
     }
-  };
-
-  const copyKey = async () => {
-    if (!success) return;
-    try {
-      await navigator.clipboard.writeText(success.api_key);
-    } catch {
-      const ta = document.createElement("textarea");
-      ta.value = success.api_key;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-    }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2500);
   };
 
   if (success) {
@@ -87,58 +76,27 @@ export default function DeveloperRegisterPage() {
               <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center mx-auto mb-4">
                 <Key size={28} className="text-white" />
               </div>
-              <h1 className="text-xl font-bold text-white">API Key Generated</h1>
-              <p className="text-blue-200 text-sm mt-1">{success.business_name}</p>
+              <h1 className="text-xl font-bold text-white">Account Created</h1>
+              <p className="text-blue-200 text-sm mt-1">{success.user.full_name}</p>
             </div>
 
             <div className="px-6 py-6 space-y-5">
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-                <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
-                <div className="text-sm text-amber-800">
-                  <p className="font-medium">This is your only chance to see this key</p>
-                  <p className="text-amber-700 mt-0.5">Store it securely — it will never be shown again.</p>
-                </div>
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-center">
+                <p className="text-sm text-blue-800">
+                  Your account is ready. Go to the Developer section in your dashboard to create API keys.
+                </p>
               </div>
 
-              <div>
-                <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1.5 block">Your API Key</label>
-                <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 rounded-xl px-4 py-3">
-                  <code className="flex-1 text-sm font-mono text-gray-800 break-all select-all">{success.api_key}</code>
-                  <button
-                    onClick={copyKey}
-                    className={`shrink-0 p-2 rounded-lg transition-colors ${
-                      copied ? "bg-green-50 text-green-600" : "bg-white border border-gray-200 text-gray-400 hover:text-gray-600 hover:border-gray-300"
-                    }`}
-                    title="Copy API key"
-                  >
-                    {copied ? <Check size={16} /> : <Copy size={16} />}
-                  </button>
-                </div>
-                {copied && <p className="text-xs text-green-600 mt-1">Copied to clipboard</p>}
-              </div>
+              <Button fullWidth onClick={() => router.push("/owner/developer")}>
+                Go to Developer Dashboard
+              </Button>
 
-              <div className="bg-gray-50 rounded-xl p-4">
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Quick Start</p>
-                <code className="block text-xs font-mono text-gray-700 bg-white border border-gray-200 rounded-lg px-3 py-2 leading-relaxed">
-                  pip install surepay<br />
-                  <br />
-                  from surepay import Surepay<br />
-                  client = Surepay(api_key=&quot;{success.api_key.slice(0, 12)}...&quot;)<br />
-                  result = client.verify(&quot;receipt.jpg&quot;)
-                </code>
-              </div>
-
-              <div className="space-y-2.5">
-                <Button fullWidth onClick={() => router.push("/login")}>
-                  Go to Dashboard <ArrowLeft size={15} className="rotate-180" />
-                </Button>
-                <Link
-                  href="/developer"
-                  className="block text-center text-sm text-gray-500 hover:text-gray-700 py-1"
-                >
-                  Back to API docs
-                </Link>
-              </div>
+              <Link
+                href="/developer"
+                className="block text-center text-sm text-gray-500 hover:text-gray-700 py-1"
+              >
+                Back to API docs
+              </Link>
             </div>
           </div>
         </div>
