@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, case, desc
 from sqlalchemy.orm import selectinload
 from app.database import get_db
-from app.middleware.auth import get_current_admin
+from app.middleware.supabase_auth import get_current_admin
 from app.models.user import User
 from app.models.business import Business
 from app.models.staff import StaffUser

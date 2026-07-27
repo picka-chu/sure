@@ -230,6 +230,12 @@ print(f"Amount: {result.amount} ETB")`;
           >
             Get Your API Key <ChevronRight size={16} />
           </Link>
+          <p className="text-gray-500 text-sm mt-4">
+            Already have an account?{" "}
+            <Link href="/developer/login" className="text-[#115ce9] font-medium hover:underline">
+              Sign in
+            </Link>
+          </p>
         </div>
       </section>
 

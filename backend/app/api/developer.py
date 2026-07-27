@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from app.database import get_db
 from app.middleware.api_key import get_api_client
-from app.middleware.auth import get_current_user, get_current_any
+from app.middleware.supabase_auth import get_current_user, get_current_any
 from app.models.api_key import ApiKey, generate_api_key, hash_api_key
 from app.models.business import Business
 from app.models.bank import BankAccount, BankName

@@ -215,7 +215,7 @@ export default function DeveloperRegisterPage() {
             <div className="text-center pt-2">
               <p className="text-xs text-gray-400">
                 Already have an account?{" "}
-                <Link href="/login" className="text-[#115ce9] font-medium hover:underline">
+                <Link href="/developer/login" className="text-[#115ce9] font-medium hover:underline">
                   Sign in
                 </Link>
               </p>
