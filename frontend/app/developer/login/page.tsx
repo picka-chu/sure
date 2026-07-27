@@ -2,27 +2,43 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ShieldCheck, Check, Key } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Check, Key, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { auth, googleProvider, githubProvider } from "@/lib/firebase";
 import { signInWithPopup } from "firebase/auth";
+import { getApiBase } from "@/lib/api";
 
 export default function DeveloperLoginPage() {
   const router = useRouter();
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const signInWith = async (provider: typeof googleProvider | typeof githubProvider) => {
     setError("");
+    setLoading(true);
     try {
       const cred = await signInWithPopup(auth, provider);
-      const token = await cred.user.getIdToken();
+      const firebaseToken = await cred.user.getIdToken();
 
-      localStorage.setItem("owner_token", token);
+      const res = await fetch(`${getApiBase()}/api/v1/auth/exchange`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ firebase_token: firebaseToken }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json();
+        throw new Error(body.detail || "Failed to authenticate");
+      }
+
+      const data = await res.json();
+
+      localStorage.setItem("owner_token", data.access_token);
       localStorage.setItem("owner_user", JSON.stringify({
-        id: cred.user.uid,
-        email: cred.user.email,
-        full_name: cred.user.displayName || cred.user.email?.split("@")[0],
-        business_name: "",
+        id: data.user.id,
+        email: data.user.email,
+        full_name: data.user.full_name,
+        business_name: data.user.business_name || "",
       }));
 
       sessionStorage.setItem("just_signed_up", "true");
@@ -31,6 +47,8 @@ export default function DeveloperLoginPage() {
       if (err.code !== "auth/popup-closed-by-user") {
         setError(err.message);
       }
+    } finally {
+      setLoading(false);
     }
   };
 

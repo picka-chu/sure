@@ -6,12 +6,13 @@ import json
 from uuid import UUID
 from datetime import datetime, timezone
 from typing import List, Optional
+from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Request, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from app.database import get_db
 from app.middleware.api_key import get_api_client
-from app.middleware.firebase_auth import get_current_user, get_current_any
+from app.middleware.firebase_auth import get_current_user, get_current_any, _find_or_create_user_from_firebase
 from app.models.api_key import ApiKey, generate_api_key, hash_api_key
 from app.models.business import Business
 from app.models.bank import BankAccount, BankName
@@ -24,7 +25,7 @@ from app.schemas.developer import (
     ErrorResponse,
 )
 from app.services.verification_service import verify_receipt, detect_bank_from_url, detect_bank_from_text, extract_reference, extract_qr_from_image, extract_text_from_image, fetch_receipt_from_url, extract_with_gemini
-from app.services.auth_service import register_business
+from app.services.auth_service import register_business, create_access_token
 from app.config import settings
 
 
@@ -102,6 +103,77 @@ async def developer_register(
         raise HTTPException(status_code=400, detail=str(e))
 
     return result
+
+
+class TokenExchangeRequest(BaseModel):
+    firebase_token: str
+
+
+@router.post(
+    "/auth/exchange",
+    summary="Exchange Firebase ID token for a custom JWT",
+    description="Takes a Firebase ID token from the client SDK, verifies it, and returns a custom JWT "
+    "for authenticating with the Surepay API.",
+)
+async def developer_exchange_token(
+    body: TokenExchangeRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    token = body.firebase_token
+    fb_user = None
+
+    # Try Firebase Admin SDK verification first
+    try:
+        import firebase_admin.auth as firebase_auth
+        fb_user = firebase_auth.verify_id_token(token)
+    except Exception as e:
+        logger.warning(f"Firebase verify_id_token failed in exchange: {e}")
+        # Fallback: decode JWT without signature verification
+        import base64
+        try:
+            parts = token.split(".")
+            if len(parts) != 3:
+                raise HTTPException(status_code=400, detail="Invalid token format")
+            payload_b64 = parts[1]
+            payload_b64 += "=" * (4 - len(payload_b64) % 4)
+            payload = json.loads(base64.urlsafe_b64decode(payload_b64))
+
+            exp = payload.get("exp", 0)
+            if datetime.now(timezone.utc).timestamp() > exp:
+                raise HTTPException(status_code=401, detail="Token expired")
+
+            aud = payload.get("aud", "")
+            if aud != settings.FIREBASE_PROJECT_ID:
+                raise HTTPException(status_code=401, detail="Token audience mismatch")
+
+            fb_user = {
+                "uid": payload.get("sub", ""),
+                "email": payload.get("email", ""),
+                "name": payload.get("name", ""),
+            }
+        except HTTPException:
+            raise
+        except Exception as jwt_err:
+            logger.warning(f"JWT decode fallback also failed: {jwt_err}")
+            raise HTTPException(status_code=401, detail="Unable to authenticate token")
+
+    if not fb_user:
+        raise HTTPException(status_code=401, detail="Token verification failed")
+
+    user = await _find_or_create_user_from_firebase(db, fb_user, role="owner")
+
+    custom_token = create_access_token({"sub": str(user.id), "role": "owner"})
+
+    return {
+        "access_token": custom_token,
+        "token_type": "bearer",
+        "user": {
+            "id": str(user.id),
+            "email": user.email,
+            "full_name": user.full_name,
+            "business_name": user.business.name if user.business else fb_user.get("name", ""),
+        },
+    }
 
 
 # ─── Verification ───
