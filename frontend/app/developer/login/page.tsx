@@ -3,18 +3,34 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ShieldCheck, Check, Key } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { auth, googleProvider, githubProvider } from "@/lib/firebase";
-import { signInWithRedirect } from "firebase/auth";
-import { useFirebaseRedirect } from "@/lib/useFirebaseRedirect";
+import { signInWithPopup } from "firebase/auth";
 
 export default function DeveloperLoginPage() {
-  useFirebaseRedirect();
+  const router = useRouter();
   const [error, setError] = useState("");
 
   const signInWith = async (provider: typeof googleProvider | typeof githubProvider) => {
     setError("");
-    sessionStorage.setItem("auth_redirect", "/owner/developer");
-    await signInWithRedirect(auth, provider);
+    try {
+      const cred = await signInWithPopup(auth, provider);
+      const token = await cred.user.getIdToken();
+
+      localStorage.setItem("owner_token", token);
+      localStorage.setItem("owner_user", JSON.stringify({
+        id: cred.user.uid,
+        email: cred.user.email,
+        full_name: cred.user.displayName || cred.user.email?.split("@")[0],
+        business_name: "",
+      }));
+
+      router.push("/owner/developer");
+    } catch (err: any) {
+      if (err.code !== "auth/popup-closed-by-user") {
+        setError(err.message);
+      }
+    }
   };
 
   return (

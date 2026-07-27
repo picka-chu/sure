@@ -19,11 +19,12 @@ const nextConfig = {
         headers: [
           { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
           { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'X-XSS-Protection', value: '1; mode=block' },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.googleapis.com; font-src 'self' data:; connect-src 'self' https:; frame-src 'self' https://accounts.google.com https://apis.google.com https://surepay-965a7.firebaseapp.com; media-src 'self' blob:;",
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://*.googleapis.com https://www.gstatic.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.googleapis.com; font-src 'self' data:; connect-src 'self' https:; frame-src 'self' https://accounts.google.com https://apis.google.com https://surepay-965a7.firebaseapp.com; media-src 'self' blob:;",
           },
         ],
       },
