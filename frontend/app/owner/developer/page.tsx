@@ -1,22 +1,155 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Key, Plus, Copy, Check, X, AlertTriangle, Clock, Trash2 } from "lucide-react";
-import Button from "@/components/ui/Button";
+import {
+  Key, Plus, Copy, Check, X, Trash2, ShieldCheck, Activity,
+  Clock, ExternalLink, ChevronRight, Search, RefreshCw,
+  Terminal, Book, Settings, BarChart3, Code2, Download,
+  AlertCircle, CheckCircle, XCircle, Loader2,
+} from "lucide-react";
 import { getApiBase } from "@/lib/api";
 
 interface ApiKeyItem {
-  id: string;
-  name: string;
-  key_prefix: string;
-  rate_limit: number;
-  is_active: boolean;
-  last_used_at: string | null;
+  id: string; name: string; key_prefix: string;
+  rate_limit: number; is_active: boolean;
+  last_used_at: string | null; created_at: string;
+}
+
+interface VerificationItem {
+  id: string; status: string; bank_name: string | null;
+  transaction_reference: string | null; payer_name: string | null;
+  amount: string | null; currency: string | null;
+  is_verified: boolean; reason: string | null;
   created_at: string;
 }
 
-export default function OwnerDeveloperPage() {
+type Tab = "keys" | "verifications" | "docs" | "settings";
+
+const tabs: { id: Tab; label: string; icon: typeof Key }[] = [
+  { id: "keys", label: "API Keys", icon: Key },
+  { id: "verifications", label: "Verifications", icon: Activity },
+  { id: "docs", label: "Quick Start", icon: Book },
+  { id: "settings", label: "Settings", icon: Settings },
+];
+
+export default function DeveloperDashboard() {
+  const router = useRouter();
+  const [token, setToken] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<Tab>("keys");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const t = localStorage.getItem("owner_token");
+    const u = localStorage.getItem("owner_user");
+    if (!t || !u) { router.push("/developer/login"); return; }
+    setToken(t);
+    setUser(JSON.parse(u));
+  }, [router]);
+
+  if (!token) return null;
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <TopBar user={user} sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+
+      <div className="flex">
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          open={sidebarOpen}
+          setOpen={setSidebarOpen}
+        />
+
+        <main className="flex-1 min-w-0 lg:ml-64">
+          <div className="px-4 sm:px-6 lg:px-8 py-6 max-w-6xl mx-auto">
+            {activeTab === "keys" && <ApiKeysSection token={token} />}
+            {activeTab === "verifications" && <VerificationsSection token={token} />}
+            {activeTab === "docs" && <DocsSection token={token} />}
+            {activeTab === "settings" && <SettingsSection token={token} user={user} />}
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function TopBar({ user, sidebarOpen, setSidebarOpen }: any) {
+  return (
+    <header className="fixed top-0 left-0 right-0 z-30 bg-white border-b border-gray-200 h-14">
+      <div className="flex items-center justify-between h-full px-4 lg:px-6">
+        <div className="flex items-center gap-3">
+          <button onClick={() => setSidebarOpen(!sidebarOpen)} className="lg:hidden p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
+            {sidebarOpen ? <X size={18} /> : <MenuIcon />}
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-[#115ce9] flex items-center justify-center">
+              <ShieldCheck size={14} className="text-white" />
+            </div>
+            <span className="font-semibold text-[15px] text-gray-900 hidden sm:inline">Surepay</span>
+            <span className="text-[15px] text-gray-300 hidden sm:inline">/</span>
+            <span className="text-[13px] font-medium text-gray-500 hidden sm:inline">Developer</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <a href="/owner" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">Business Dashboard</a>
+          <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center">
+            <span className="text-[11px] font-medium text-gray-600">
+              {user?.full_name?.charAt(0)?.toUpperCase() || "D"}
+            </span>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function MenuIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M3 12h18M3 6h18M3 18h18" />
+    </svg>
+  );
+}
+
+function Sidebar({ activeTab, setActiveTab, open, setOpen }: any) {
+  return (
+    <>
+      {open && <div className="fixed inset-0 z-20 bg-black/30 lg:hidden" onClick={() => setOpen(false)} />}
+      <aside className={`fixed top-14 left-0 z-20 h-[calc(100vh-3.5rem)] w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}>
+        <nav className="p-3 space-y-0.5">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <button key={tab.id} onClick={() => { setActiveTab(tab.id); setOpen(false); }}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  activeTab === tab.id
+                    ? "bg-[#115ce9] text-white"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                <Icon size={16} />
+                {tab.label}
+              </button>
+            );
+          })}
+        </nav>
+        <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-gray-100">
+          <div className="bg-gradient-to-br from-[#115ce9] to-[#0e4fc9] rounded-xl p-4 text-white">
+            <p className="text-[11px] font-medium opacity-80">Need help?</p>
+            <p className="text-xs mt-1 opacity-90">Check our API docs for integration guides.</p>
+            <a href="/docs" className="inline-flex items-center gap-1 text-[11px] font-medium mt-2 text-white/90 hover:text-white">
+              View Docs <ChevronRight size={12} />
+            </a>
+          </div>
+        </div>
+      </aside>
+    </>
+  );
+}
+
+function ApiKeysSection({ token }: { token: string }) {
   const [keys, setKeys] = useState<ApiKeyItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -25,42 +158,23 @@ export default function OwnerDeveloperPage() {
   const [creating, setCreating] = useState(false);
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const router = useRouter();
+  const [revoking, setRevoking] = useState<string | null>(null);
 
-  const token = typeof window !== "undefined" ? localStorage.getItem("owner_token") : null;
+  const apiHeaders = useCallback(() => ({ "Authorization": `Bearer ${token}` }), [token]);
 
-  const apiHeaders = () => ({ "Authorization": `Bearer ${token}` });
-
-  const fetchKeys = async () => {
-    if (!token) return;
+  const fetchKeys = useCallback(async () => {
     try {
-      const res = await fetch(`${getApiBase()}/api/v1/keys`, {
-        headers: apiHeaders(),
-      });
-      if (res.status === 401) {
-        localStorage.removeItem("owner_token");
-        localStorage.removeItem("owner_user");
-        router.push("/login");
-        return;
-      }
-      if (res.ok) {
-        setKeys(await res.json());
-      } else {
-        setError("Failed to load API keys");
-      }
-    } catch {
-      setError("Network error");
-    } finally {
-      setLoading(false);
-    }
-  };
+      const res = await fetch(`${getApiBase()}/api/v1/keys`, { headers: apiHeaders() });
+      if (res.ok) setKeys(await res.json());
+      else setError("Failed to load keys");
+    } catch { setError("Network error"); }
+    finally { setLoading(false); }
+  }, [apiHeaders]);
 
-  useEffect(() => {
-    fetchKeys();
-  }, []);
+  useEffect(() => { fetchKeys(); }, [fetchKeys]);
 
   const createKey = async () => {
-    if (!newKeyName.trim() || !token) return;
+    if (!newKeyName.trim()) return;
     setCreating(true);
     setError("");
     try {
@@ -79,157 +193,426 @@ export default function OwnerDeveloperPage() {
         const body = await res.json();
         setError(body.detail || "Failed to create key");
       }
-    } catch {
-      setError("Network error");
-    } finally {
-      setCreating(false);
-    }
+    } catch { setError("Network error"); }
+    finally { setCreating(false); }
   };
 
   const revokeKey = async (id: string) => {
-    if (!confirm("Revoke this API key? It will immediately stop working.")) return;
-    if (!token) return;
+    setRevoking(id);
     try {
-      const res = await fetch(`${getApiBase()}/api/v1/keys/${id}`, {
-        method: "DELETE",
-        headers: apiHeaders(),
-      });
-      if (res.ok) {
-        await fetchKeys();
-      } else {
-        const body = await res.json();
-        setError(body.detail || "Failed to revoke key");
-      }
-    } catch {
-      setError("Network error");
-    }
+      await fetch(`${getApiBase()}/api/v1/keys/${id}`, { method: "DELETE", headers: apiHeaders() });
+      await fetchKeys();
+    } catch { setError("Failed to revoke key"); }
+    finally { setRevoking(null); }
   };
 
   const copyKey = async (key: string) => {
-    try {
-      await navigator.clipboard.writeText(key);
-    } catch {
+    try { await navigator.clipboard.writeText(key); }
+    catch {
       const ta = document.createElement("textarea");
-      ta.value = key;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
+      ta.value = key; document.body.appendChild(ta);
+      ta.select(); document.execCommand("copy");
       document.body.removeChild(ta);
     }
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
   };
 
+  const activeKeys = keys.filter(k => k.is_active);
+  const revokedKeys = keys.filter(k => !k.is_active);
+
   return (
-    <div className="max-w-3xl">
+    <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Developer API</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Manage API keys for programmatic access</p>
+          <h1 className="text-xl font-bold text-gray-900">API Keys</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Manage keys for programmatic access to the Surepay API.</p>
         </div>
-        <Button onClick={() => { setShowCreate(true); setCreatedKey(null); }}>
-          <Plus size={15} />
-          New Key
-        </Button>
+        <button onClick={() => { setShowCreate(true); setCreatedKey(null); }}
+          className="flex items-center gap-1.5 px-4 py-2 bg-[#115ce9] text-white text-sm font-medium rounded-lg hover:bg-[#0f4fce] transition-colors"
+        >
+          <Plus size={15} /> Create Key
+        </button>
       </div>
 
       {error && (
-        <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-700 flex items-center gap-2 mb-4">
-          <AlertTriangle size={16} />
-          {error}
+        <div className="flex items-center gap-2 p-3 mb-4 rounded-lg bg-red-50 border border-red-100 text-sm text-red-700">
+          <AlertCircle size={15} /> {error}
+          <button onClick={() => setError("")} className="ml-auto text-red-400 hover:text-red-600"><X size={14} /></button>
         </div>
       )}
 
       {createdKey && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
-          <div className="flex items-start gap-2 mb-2">
-            <Key size={16} className="text-amber-600 mt-0.5 shrink-0" />
-            <div>
-              <p className="text-sm font-medium text-amber-800">New API Key Created</p>
-              <p className="text-xs text-amber-700">Copy this key now — it will never be shown again.</p>
+        <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+              <Key size={15} className="text-emerald-600" />
             </div>
-            <button onClick={() => setCreatedKey(null)} className="ml-auto text-amber-400 hover:text-amber-600">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-emerald-900">API Key Created</p>
+              <p className="text-xs text-emerald-700 mt-0.5">Copy this key now — you won&apos;t see it again.</p>
+              <div className="flex items-center gap-2 mt-2 bg-white rounded-lg border border-emerald-200 px-3 py-2.5">
+                <code className="flex-1 text-sm font-mono text-gray-800 break-all select-all">{createdKey}</code>
+                <button onClick={() => copyKey(createdKey)}
+                  className={`shrink-0 p-1.5 rounded transition-colors ${copied ? "text-emerald-600" : "text-gray-400 hover:text-gray-600"}`}>
+                  {copied ? <Check size={15} /> : <Copy size={15} />}
+                </button>
+              </div>
+            </div>
+            <button onClick={() => setCreatedKey(null)} className="text-emerald-400 hover:text-emerald-600">
               <X size={16} />
-            </button>
-          </div>
-          <div className="flex items-center gap-2 bg-white rounded-lg border border-amber-200 px-3 py-2.5 mt-2">
-            <code className="flex-1 text-sm font-mono text-gray-800 break-all select-all">{createdKey}</code>
-            <button onClick={() => copyKey(createdKey)} className={`shrink-0 p-1.5 rounded transition-colors ${copied ? "text-green-600" : "text-gray-400 hover:text-gray-600"}`}>
-              {copied ? <Check size={16} /> : <Copy size={16} />}
             </button>
           </div>
         </div>
       )}
 
       {showCreate && !createdKey && (
-        <div className="bg-white border border-gray-200 rounded-xl p-4 mb-4">
+        <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-medium text-gray-900 text-sm">Create API Key</h3>
-            <button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-gray-600">
-              <X size={16} />
-            </button>
+            <h3 className="text-sm font-semibold text-gray-900">New API Key</h3>
+            <button onClick={() => setShowCreate(false)} className="text-gray-400 hover:text-gray-600"><X size={15} /></button>
           </div>
           <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={newKeyName}
-              onChange={(e) => setNewKeyName(e.target.value)}
+            <input type="text" value={newKeyName} onChange={(e) => setNewKeyName(e.target.value)}
               placeholder="e.g. Production, My App, Staging"
               className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#115ce9]/20 focus:border-[#115ce9]"
-              onKeyDown={(e) => e.key === "Enter" && createKey()}
-              autoFocus
+              onKeyDown={(e) => e.key === "Enter" && createKey()} autoFocus
             />
-            <Button onClick={createKey} loading={creating} size="md">
-              Create
-            </Button>
+            <button onClick={createKey} disabled={creating || !newKeyName.trim()}
+              className="px-4 py-2 bg-[#115ce9] text-white text-sm font-medium rounded-lg hover:bg-[#0f4fce] transition-colors disabled:opacity-50"
+            >
+              {creating ? <Loader2 size={15} className="animate-spin" /> : "Create"}
+            </button>
           </div>
         </div>
       )}
 
       {loading ? (
-        <div className="text-center py-12 text-sm text-gray-400">Loading...</div>
+        <div className="flex items-center justify-center py-20 text-gray-400">
+          <Loader2 size={20} className="animate-spin mr-2" /> Loading...
+        </div>
       ) : keys.length === 0 ? (
-        <div className="text-center py-12 border border-dashed border-gray-200 rounded-xl">
-          <Key size={32} className="mx-auto text-gray-300 mb-3" />
-          <p className="text-sm text-gray-500">No API keys yet</p>
-          <p className="text-xs text-gray-400 mt-1">Create a key to start integrating the API.</p>
+        <div className="text-center py-20 border-2 border-dashed border-gray-200 rounded-xl">
+          <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+            <Key size={22} className="text-gray-400" />
+          </div>
+          <p className="text-sm font-medium text-gray-900">No API keys yet</p>
+          <p className="text-xs text-gray-500 mt-1">Create your first key to start integrating.</p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {keys.map((key) => (
-            <div key={key.id} className="bg-white border border-gray-200 rounded-xl p-4 flex items-center justify-between">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${key.is_active ? "bg-green-50" : "bg-gray-100"}`}>
-                  <Key size={15} className={key.is_active ? "text-green-600" : "text-gray-400"} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{key.name}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <code className="text-xs font-mono text-gray-400">{key.key_prefix}...</code>
-                    <span className={`inline-block w-1.5 h-1.5 rounded-full ${key.is_active ? "bg-green-500" : "bg-gray-300"}`} />
-                    <span className="text-xs text-gray-400">{key.is_active ? "Active" : "Revoked"}</span>
-                    {key.last_used_at && (
-                      <>
-                        <Clock size={10} className="text-gray-300" />
-                        <span className="text-xs text-gray-400">{new Date(key.last_used_at).toLocaleDateString()}</span>
-                      </>
-                    )}
-                  </div>
-                </div>
+        <div className="space-y-6">
+          {activeKeys.length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Active ({activeKeys.length})</h3>
+              <div className="space-y-2">
+                {activeKeys.map((key) => (
+                  <KeyCard key={key.id} keyItem={key} onRevoke={revokeKey} revoking={revoking === key.id} />
+                ))}
               </div>
-              {key.is_active && (
-                <button
-                  onClick={() => revokeKey(key.id)}
-                  className="shrink-0 p-2 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                  title="Revoke key"
-                >
-                  <Trash2 size={15} />
-                </button>
-              )}
             </div>
-          ))}
+          )}
+          {revokedKeys.length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Revoked ({revokedKeys.length})</h3>
+              <div className="space-y-2">
+                {revokedKeys.map((key) => (
+                  <KeyCard key={key.id} keyItem={key} onRevoke={revokeKey} revoking={false} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
+    </div>
+  );
+}
+
+function KeyCard({ keyItem, onRevoke, revoking }: { keyItem: ApiKeyItem; onRevoke: (id: string) => void; revoking: boolean }) {
+  return (
+    <div className={`rounded-xl border p-4 transition-colors ${keyItem.is_active ? "bg-white border-gray-200 hover:border-gray-300" : "bg-gray-50 border-gray-100"}`}>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${keyItem.is_active ? "bg-blue-50" : "bg-gray-100"}`}>
+            <Key size={16} className={keyItem.is_active ? "text-[#115ce9]" : "text-gray-400"} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-medium text-gray-900">{keyItem.name}</p>
+              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${keyItem.is_active ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"}`}>
+                {keyItem.is_active ? "Active" : "Revoked"}
+              </span>
+            </div>
+            <div className="flex items-center gap-3 mt-1">
+              <code className="text-xs font-mono text-gray-400 bg-gray-50 px-1.5 py-0.5 rounded">{keyItem.key_prefix}••••••••••</code>
+              <span className="text-[11px] text-gray-400">{keyItem.rate_limit} req/s</span>
+              {keyItem.last_used_at && (
+                <span className="flex items-center gap-1 text-[11px] text-gray-400">
+                  <Clock size={10} /> Last used {new Date(keyItem.last_used_at).toLocaleDateString()}
+                </span>
+              )}
+              <span className="text-[11px] text-gray-400">Created {new Date(keyItem.created_at).toLocaleDateString()}</span>
+            </div>
+          </div>
+        </div>
+        {keyItem.is_active && (
+          <button onClick={() => onRevoke(keyItem.id)} disabled={revoking}
+            className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
+          >
+            {revoking ? <Loader2 size={14} className="animate-spin" /> : "Revoke"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function VerificationsSection({ token }: { token: string }) {
+  const [items, setItems] = useState<VerificationItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [page, setPage] = useState(0);
+  const [total, setTotal] = useState(0);
+  const limit = 10;
+
+  const apiHeaders = useCallback(() => ({ "Authorization": `Bearer ${token}` }), [token]);
+
+  const fetchVerifications = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${getApiBase()}/api/v1/verifications?limit=${limit}&offset=${page * limit}`, { headers: apiHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        setItems(data.verifications || []);
+        setTotal(data.total || 0);
+      } else setError("Failed to load verifications");
+    } catch { setError("Network error"); }
+    finally { setLoading(false); }
+  }, [apiHeaders, page]);
+
+  useEffect(() => { fetchVerifications(); }, [fetchVerifications]);
+
+  const stats = {
+    total: total,
+    verified: items.filter(i => i.is_verified).length,
+    failed: items.filter(i => !i.is_verified).length,
+  };
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h1 className="text-xl font-bold text-gray-900">Verifications</h1>
+        <p className="text-sm text-gray-500 mt-0.5">Recent receipt verification history.</p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        {[
+          { label: "Total", value: stats.total, color: "text-gray-900", bg: "bg-gray-50" },
+          { label: "Verified", value: stats.verified, color: "text-emerald-700", bg: "bg-emerald-50" },
+          { label: "Failed", value: stats.failed, color: "text-red-700", bg: "bg-red-50" },
+        ].map((s) => (
+          <div key={s.label} className={`${s.bg} rounded-xl p-4`}>
+            <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wider">{s.label}</p>
+            <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {error && (
+        <div className="flex items-center gap-2 p-3 mb-4 rounded-lg bg-red-50 border border-red-100 text-sm text-red-700">
+          <AlertCircle size={15} /> {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex items-center justify-center py-20 text-gray-400">
+          <Loader2 size={20} className="animate-spin mr-2" /> Loading...
+        </div>
+      ) : items.length === 0 ? (
+        <div className="text-center py-20 border-2 border-dashed border-gray-200 rounded-xl">
+          <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+            <Activity size={22} className="text-gray-400" />
+          </div>
+          <p className="text-sm font-medium text-gray-900">No verifications yet</p>
+          <p className="text-xs text-gray-500 mt-1">Use your API key to make your first verification.</p>
+        </div>
+      ) : (
+        <>
+          <div className="space-y-2">
+            {items.map((v) => (
+              <div key={v.id} className="bg-white rounded-xl border border-gray-200 p-4 hover:border-gray-300 transition-colors">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${v.is_verified ? "bg-emerald-50" : "bg-red-50"}`}>
+                      {v.is_verified ? <CheckCircle size={16} className="text-emerald-600" /> : <XCircle size={16} className="text-red-500" />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-900">{v.bank_name || "Unknown bank"}</span>
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${v.is_verified ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+                          {v.is_verified ? "Verified" : "Failed"}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                        {v.transaction_reference && <span>Ref: {v.transaction_reference}</span>}
+                        {v.amount && <span>{v.amount} {v.currency || "ETB"}</span>}
+                        {v.payer_name && <span>Payer: {v.payer_name}</span>}
+                        <span>{new Date(v.created_at).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                  {v.reason && (
+                    <div className="hidden md:block max-w-xs text-right">
+                      <p className="text-[11px] text-gray-400 leading-tight">{v.reason}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {total > limit && (
+            <div className="flex items-center justify-center gap-2 mt-6">
+              <button disabled={page === 0} onClick={() => setPage(p => p - 1)}
+                className="px-3 py-1.5 rounded-lg text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-30 transition-colors"
+              >Previous</button>
+              <span className="text-xs text-gray-400">Page {page + 1} of {Math.ceil(total / limit)}</span>
+              <button disabled={(page + 1) * limit >= total} onClick={() => setPage(p => p + 1)}
+                className="px-3 py-1.5 rounded-lg text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-30 transition-colors"
+              >Next</button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function DocsSection({ token }: { token: string }) {
+  const curl = `curl -X POST https://sure1.onrender.com/api/v1/verify \\
+  -H "X-API-Key: YOUR_API_KEY" \\
+  -F "file=@receipt.jpg" \\
+  -F "bank_name=cbe"`;
+
+  const py = `from surepay import Surepay
+
+client = Surepay(api_key="YOUR_API_KEY")
+result = client.verify("receipt.jpg", bank_name="cbe")
+print(f"Verified: {result.is_verified}")`;
+
+  const node = `const surepay = new Surepay({ apiKey: "YOUR_API_KEY" });
+
+const result = await surepay.verify({
+  file: "receipt.jpg",
+  bankName: "cbe"
+});
+console.log("Verified:", result.isVerified);`;
+
+  const copyCode = async (code: string) => {
+    try { await navigator.clipboard.writeText(code); }
+    catch {
+      const ta = document.createElement("textarea");
+      ta.value = code; document.body.appendChild(ta);
+      ta.select(); document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+  };
+
+  const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const handleCopy = (code: string, idx: number) => {
+    copyCode(code);
+    setCopiedIdx(idx);
+    setTimeout(() => setCopiedIdx(null), 2000);
+  };
+
+  return (
+    <div>
+      <div className="mb-6">
+        <h1 className="text-xl font-bold text-gray-900">Quick Start</h1>
+        <p className="text-sm text-gray-500 mt-0.5">Get up and running in minutes.</p>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-4 mb-6">
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="flex items-center gap-2 mb-1">
+            <Terminal size={15} className="text-[#115ce9]" />
+            <h3 className="text-sm font-semibold text-gray-900">1. Install the SDK</h3>
+          </div>
+          <p className="text-xs text-gray-500 mb-3">Python package for easy integration.</p>
+          <div className="bg-gray-900 rounded-lg p-3">
+            <code className="text-xs text-green-400 font-mono">pip install surepay-sdk</code>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="flex items-center gap-2 mb-1">
+            <Key size={15} className="text-[#115ce9]" />
+            <h3 className="text-sm font-semibold text-gray-900">2. Get your API key</h3>
+          </div>
+          <p className="text-xs text-gray-500 mb-3">Create a key in the API Keys tab above.</p>
+          <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+            <code className="text-xs text-gray-600 font-mono">Replace YOUR_API_KEY with your key</code>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {[
+          { label: "cURL", code: curl },
+          { label: "Python", code: py },
+          { label: "Node.js", code: node },
+        ].map((snippet, idx) => (
+          <div key={snippet.label} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
+              <div className="flex items-center gap-2">
+                <Code2 size={14} className="text-gray-400" />
+                <span className="text-xs font-medium text-gray-600">{snippet.label}</span>
+              </div>
+              <button onClick={() => handleCopy(snippet.code, idx)}
+                className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                {copiedIdx === idx ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
+              </button>
+            </div>
+            <pre className="p-4 overflow-x-auto"><code className="text-xs font-mono text-gray-800 leading-relaxed">{snippet.code}</code></pre>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-6 text-center">
+        <a href="/docs"
+          className="inline-flex items-center gap-1.5 text-sm text-[#115ce9] font-medium hover:text-[#0f4fce] transition-colors"
+        >
+          View full API documentation <ExternalLink size={14} />
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function SettingsSection({ token, user }: { token: string; user: any }) {
+  return (
+    <div>
+      <div className="mb-6">
+        <h1 className="text-xl font-bold text-gray-900">Settings</h1>
+        <p className="text-sm text-gray-500 mt-0.5">Manage your developer profile.</p>
+      </div>
+
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h3 className="text-sm font-semibold text-gray-900 mb-4">Profile</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-medium text-gray-500">Name</label>
+            <p className="text-sm text-gray-900 mt-0.5">{user?.full_name || "—"}</p>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-500">Email</label>
+            <p className="text-sm text-gray-900 mt-0.5">{user?.email || "—"}</p>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-500">Organization</label>
+            <p className="text-sm text-gray-900 mt-0.5">{user?.business_name || "—"}</p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
