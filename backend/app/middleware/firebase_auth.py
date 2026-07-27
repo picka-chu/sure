@@ -32,7 +32,7 @@ async def _find_or_create_user_from_firebase(
 ) -> User:
     email = fb_user.get("email") or fb_user.get("uid")
     result = await db.execute(select(User).where(User.email == email))
-    user = result.scalar_one_or_none()
+    user = result.scalars().first()
     if user:
         return user
 
