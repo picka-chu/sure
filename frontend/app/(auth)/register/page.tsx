@@ -17,8 +17,7 @@ import {
 import AuthLayout from "@/components/layout/AuthLayout";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { auth } from "@/lib/firebase";
-import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { authApi } from "@/lib/api";
 
 interface RegisterForm {
   business_name: string;
@@ -42,28 +41,31 @@ export default function RegisterPage() {
     formState: { errors },
   } = useForm<RegisterForm>();
 
-  const afterAuth = async (user: any, fullName?: string) => {
-    const token = await user.getIdToken();
-    localStorage.setItem("owner_token", token);
-    localStorage.setItem("owner_user", JSON.stringify({
-      id: user.uid,
-      email: user.email,
-      full_name: fullName || user.displayName || user.email?.split("@")[0],
-      business_name: "",
-    }));
-    localStorage.setItem("show_welcome_trial", "true");
-    router.push("/owner");
-  };
-
   const onSubmit = async (data: RegisterForm) => {
     setLoading(true);
     setError("");
     try {
-      const cred = await createUserWithEmailAndPassword(auth, data.email, data.password);
-      await updateProfile(cred.user, { displayName: data.full_name });
-      await afterAuth(cred.user, data.full_name);
+      const res = await authApi.register({
+        business_name: data.business_name,
+        full_name: data.full_name,
+        email: data.email,
+        password: data.password,
+        phone: data.phone || undefined,
+      });
+      const body = res.data;
+
+      localStorage.setItem("owner_token", body.access_token);
+      localStorage.setItem("owner_user", JSON.stringify({
+        id: body.user?.id || "",
+        email: body.user?.email || data.email,
+        full_name: body.user?.full_name || data.full_name,
+        business_name: body.user?.business_name || data.business_name,
+      }));
+      localStorage.setItem("show_welcome_trial", "true");
+      router.push("/owner");
     } catch (err: any) {
-      setError(err.message || "Registration failed");
+      const msg = err.response?.data?.detail || err.message || "Registration failed";
+      setError(msg);
     } finally {
       setLoading(false);
     }

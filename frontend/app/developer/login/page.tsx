@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, ShieldCheck, Check, Key, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { auth, googleProvider, githubProvider } from "@/lib/firebase";
-import { signInWithPopup } from "firebase/auth";
+import { supabase } from "@/lib/supabase";
 import { getApiBase } from "@/lib/api";
 
 export default function DeveloperLoginPage() {
@@ -13,44 +12,68 @@ export default function DeveloperLoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const signInWith = async (provider: typeof googleProvider | typeof githubProvider) => {
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session?.access_token) return;
+      setLoading(true);
+      try {
+        const res = await fetch(`${getApiBase()}/api/v1/auth/exchange`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ access_token: session.access_token }),
+        });
+        if (!res.ok) {
+          const body = await res.json();
+          throw new Error(body.detail || "Failed to authenticate");
+        }
+        const data = await res.json();
+
+        localStorage.setItem("owner_token", data.access_token);
+        localStorage.setItem("owner_user", JSON.stringify({
+          id: data.user.id,
+          email: data.user.email,
+          full_name: data.user.full_name,
+          business_name: data.user.business_name || "",
+        }));
+
+        sessionStorage.setItem("just_signed_up", "true");
+        await supabase.auth.signOut();
+        router.push("/developer/onboarding");
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    });
+  }, [router]);
+
+  const signInWith = async (provider: "google" | "github") => {
     setError("");
     setLoading(true);
     try {
-      const cred = await signInWithPopup(auth, provider);
-      const firebaseToken = await cred.user.getIdToken();
-
-      const res = await fetch(`${getApiBase()}/api/v1/auth/exchange`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firebase_token: firebaseToken }),
+      const { error: oauthErr } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/developer/login`,
+        },
       });
-
-      if (!res.ok) {
-        const body = await res.json();
-        throw new Error(body.detail || "Failed to authenticate");
-      }
-
-      const data = await res.json();
-
-      localStorage.setItem("owner_token", data.access_token);
-      localStorage.setItem("owner_user", JSON.stringify({
-        id: data.user.id,
-        email: data.user.email,
-        full_name: data.user.full_name,
-        business_name: data.user.business_name || "",
-      }));
-
-      sessionStorage.setItem("just_signed_up", "true");
-      router.push("/developer/onboarding");
+      if (oauthErr) throw oauthErr;
     } catch (err: any) {
-      if (err.code !== "auth/popup-closed-by-user") {
-        setError(err.message);
-      }
-    } finally {
+      setError(err.message);
       setLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex items-center gap-2 text-gray-400">
+          <Loader2 size={20} className="animate-spin" />
+          <span className="text-sm">Signing in...</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -110,7 +133,7 @@ export default function DeveloperLoginPage() {
 
             <button
               type="button"
-              onClick={() => signInWith(googleProvider)}
+              onClick={() => signInWith("google")}
               className="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
             >
               <svg width="20" height="20" viewBox="0 0 24 24">
@@ -124,7 +147,7 @@ export default function DeveloperLoginPage() {
 
             <button
               type="button"
-              onClick={() => signInWith(githubProvider)}
+              onClick={() => signInWith("github")}
               className="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -132,15 +155,6 @@ export default function DeveloperLoginPage() {
               </svg>
               Sign in with GitHub
             </button>
-
-            <div className="text-center pt-4">
-              <p className="text-xs text-gray-400">
-                Don&apos;t have an account?{" "}
-                <Link href="/developer/register" className="text-[#115ce9] font-medium hover:underline">
-                  Register as developer
-                </Link>
-              </p>
-            </div>
           </div>
         </div>
       </div>

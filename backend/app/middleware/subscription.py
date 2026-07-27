@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models.user import User
 from app.models.staff import StaffUser
-from app.middleware.firebase_auth import get_current_any
+from app.middleware.supabase_auth import get_current_any
 from typing import Union
 from datetime import datetime, timezone
 

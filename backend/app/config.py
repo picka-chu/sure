@@ -35,12 +35,7 @@ class Settings:
     GEMINI_API_KEY: Optional[str] = os.getenv("GEMINI_API_KEY")
     SUPABASE_URL: str = os.getenv("SUPABASE_URL", "https://yqmvyebrytriorgpimby.supabase.co")
     SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", "")
-    SUPABASE_SERVICE_KEY: Optional[str] = os.getenv("SUPABASE_SERVICE_KEY")
-    FIREBASE_SERVICE_ACCOUNT_PATH: str = os.getenv(
-        "FIREBASE_SERVICE_ACCOUNT_PATH", "firebase-service-account.json"
-    )
-    FIREBASE_SERVICE_ACCOUNT_JSON: Optional[str] = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
-    FIREBASE_PROJECT_ID: str = os.getenv("FIREBASE_PROJECT_ID", "surepay-965a7")
+    SUPABASE_SERVICE_KEY: Optional[str] = os.getenv("SUPABASE_SERVICE_KEY", "")
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
     UPLOAD_DIR: str = os.getenv("UPLOAD_DIR", "./uploads")
     PRICING_MONTHLY_AMOUNT: float = float(os.getenv("PRICING_MONTHLY_AMOUNT", "750"))

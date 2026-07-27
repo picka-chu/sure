@@ -8,8 +8,7 @@ import { Mail, Lock, Eye, EyeOff, ArrowRight } from "lucide-react";
 import AuthLayout from "@/components/layout/AuthLayout";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { auth } from "@/lib/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { authApi } from "@/lib/api";
 
 interface LoginForm {
   email: string;
@@ -32,21 +31,21 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     try {
-      const cred = await signInWithEmailAndPassword(auth, data.email, data.password);
-      const token = await cred.user.getIdToken();
-      const metadata = cred.user.providerData[0] || {};
+      const res = await authApi.login({ email: data.email, password: data.password });
+      const body = res.data;
 
-      localStorage.setItem("owner_token", token);
+      localStorage.setItem("owner_token", body.access_token);
       localStorage.setItem("owner_user", JSON.stringify({
-        id: cred.user.uid,
-        email: cred.user.email,
-        full_name: cred.user.displayName || cred.user.email?.split("@")[0],
-        business_name: "",
+        id: body.user?.id || "",
+        email: body.user?.email || data.email,
+        full_name: body.user?.full_name || data.email.split("@")[0],
+        business_name: body.user?.business_name || "",
       }));
 
       router.push("/owner");
     } catch (err: any) {
-      setError(err.message || "Invalid email or password");
+      const msg = err.response?.data?.detail || err.message || "Invalid email or password";
+      setError(msg);
     } finally {
       setLoading(false);
     }
