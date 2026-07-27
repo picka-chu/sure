@@ -170,7 +170,7 @@ async def admin_get_business(
         .options(selectinload(Business.owner), selectinload(Business.bank_accounts))
         .where(Business.id == business_id)
     )
-    b = result.scalar_one_or_none()
+    b = result.scalars().first()
     if not b:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Business not found")
 
@@ -262,7 +262,7 @@ async def admin_toggle_business(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(Business).where(Business.id == business_id))
-    b = result.scalar_one_or_none()
+    b = result.scalars().first()
     if not b:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Business not found")
     b.is_active = not b.is_active
@@ -323,7 +323,7 @@ async def admin_verify_payment(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Status must be 'verified' or 'rejected'")
 
     result = await db.execute(select(Payment).where(Payment.id == payment_id))
-    payment = result.scalar_one_or_none()
+    payment = result.scalars().first()
     if not payment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Payment not found")
 
@@ -334,7 +334,7 @@ async def admin_verify_payment(
 
     if new_status == "verified":
         biz_result = await db.execute(select(Business).where(Business.id == payment.business_id))
-        business = biz_result.scalar_one_or_none()
+        business = biz_result.scalars().first()
         if business:
             from app.models.business import SubscriptionStatus, PlanType
             business.subscription_status = SubscriptionStatus.ACTIVE

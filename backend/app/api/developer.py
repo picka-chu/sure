@@ -231,7 +231,7 @@ async def developer_verify(
             Verification.business_id == business.id,
         )
     )
-    if existing.scalar_one_or_none():
+    if existing.scalars().first():
         logger.info(f"[dev:verify] Duplicate ref={ref} — continuing")
 
     result = await verify_receipt(bank, ref, acct_number)
@@ -373,7 +373,7 @@ async def developer_get_verification(
             Verification.business_id == business.id,
         )
     )
-    verification = result.scalar_one_or_none()
+    verification = result.scalars().first()
     if not verification:
         raise HTTPException(status_code=404, detail="Verification not found")
     is_verified = verification.status == VerificationStatus.VERIFIED
@@ -504,7 +504,7 @@ async def developer_revoke_key(
             ApiKey.business_id == business.id,
         )
     )
-    key = result.scalar_one_or_none()
+    key = result.scalars().first()
     if not key:
         raise HTTPException(status_code=404, detail="API key not found")
     key.is_active = False

@@ -35,7 +35,7 @@ PRICING = [
 
 async def get_subscription_status(db: AsyncSession, business_id: UUID) -> dict:
     result = await db.execute(select(Business).where(Business.id == business_id))
-    business = result.scalar_one_or_none()
+    business = result.scalars().first()
     if not business:
         raise ValueError("Business not found")
 
@@ -77,7 +77,7 @@ async def get_subscription_status(db: AsyncSession, business_id: UUID) -> dict:
 
 async def sync_subscription_expiry(db: AsyncSession, business_id: UUID) -> None:
     result = await db.execute(select(Business).where(Business.id == business_id))
-    business = result.scalar_one_or_none()
+    business = result.scalars().first()
     if not business:
         return
     now = datetime.now(timezone.utc)
@@ -110,7 +110,7 @@ async def submit_payment(
     amount = MONTHLY_PRICE if plan_type == "monthly" else YEARLY_PRICE
 
     result = await db.execute(select(Business).where(Business.id == business_id))
-    business = result.scalar_one_or_none()
+    business = result.scalars().first()
     if not business:
         raise ValueError("Business not found")
 
@@ -120,7 +120,7 @@ async def submit_payment(
             Payment.status == PaymentStatus.PENDING,
         )
     )
-    if existing_pending.scalar_one_or_none():
+    if existing_pending.scalars().first():
         raise ValueError("You already have a pending payment. Please wait for verification.")
 
     payment = Payment(
@@ -149,7 +149,7 @@ async def verify_payment(
     notes: str | None = None,
 ) -> Payment:
     result = await db.execute(select(Payment).where(Payment.id == payment_id))
-    payment = result.scalar_one_or_none()
+    payment = result.scalars().first()
     if not payment:
         raise ValueError("Payment not found")
 
@@ -163,7 +163,7 @@ async def verify_payment(
 
     if approve:
         business_result = await db.execute(select(Business).where(Business.id == payment.business_id))
-        business = business_result.scalar_one_or_none()
+        business = business_result.scalars().first()
         if business:
             now = datetime.now(timezone.utc)
             plan = PlanType.MONTHLY if payment.plan_type == PaymentPlanType.MONTHLY else PlanType.YEARLY

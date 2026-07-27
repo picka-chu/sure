@@ -16,7 +16,7 @@ async def get_my_business(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(Business).where(Business.id == current_user.business_id))
-    business = result.scalar_one_or_none()
+    business = result.scalars().first()
     if not business:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Business not found")
     return business
@@ -29,7 +29,7 @@ async def update_my_business(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(select(Business).where(Business.id == current_user.business_id))
-    business = result.scalar_one_or_none()
+    business = result.scalars().first()
     if not business:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Business not found")
 

@@ -29,7 +29,7 @@ async def register_business(
     phone: str | None = None,
 ) -> dict:
     existing = await db.execute(select(Business).where(Business.email == email))
-    if existing.scalar_one_or_none():
+    if existing.scalars().first():
         raise ValueError("Registration failed. Please check your details and try again.")
 
     business = Business(
@@ -69,13 +69,13 @@ async def register_business(
 
 async def login_owner(db: AsyncSession, email: str, password: str) -> dict:
     result = await db.execute(select(User).where(User.email == email))
-    user = result.scalar_one_or_none()
+    user = result.scalars().first()
     if not user or not user.verify_password(password):
         audit_logger.warning(f"Failed login attempt for email={email}")
         raise ValueError("Invalid email or password")
 
     result = await db.execute(select(Business).where(Business.id == user.business_id))
-    business = result.scalar_one_or_none()
+    business = result.scalars().first()
     if not business or not business.is_active:
         audit_logger.warning(f"Login blocked — inactive business for user={user.id}")
         raise ValueError("Invalid email or password")
@@ -118,13 +118,13 @@ async def login_staff_by_email(db: AsyncSession, email: str, pin: str) -> dict:
             StaffUser.is_active == True,
         )
     )
-    staff = result.scalar_one_or_none()
+    staff = result.scalars().first()
 
     if not staff or not staff.verify_pin(pin):
         raise ValueError("Invalid email or PIN")
 
     result = await db.execute(select(Business).where(Business.id == staff.business_id))
-    business = result.scalar_one_or_none()
+    business = result.scalars().first()
     if not business or not business.is_active:
         raise ValueError("Business account is inactive")
 
@@ -148,7 +148,7 @@ async def login_staff_by_email(db: AsyncSession, email: str, pin: str) -> dict:
 
 async def login_admin(db: AsyncSession, email: str, password: str) -> dict:
     result = await db.execute(select(User).where(User.email == email))
-    user = result.scalar_one_or_none()
+    user = result.scalars().first()
     if not user or not user.verify_password(password):
         raise ValueError("Invalid email or password")
     if not user.is_super_admin:
@@ -171,13 +171,13 @@ async def login_staff(db: AsyncSession, pin: str, business_code: str) -> dict:
     result = await db.execute(
         select(Business).where(Business.id == UUID(business_code) if len(business_code) == 36 else Business.id == business_code)
     )
-    business = result.scalar_one_or_none()
+    business = result.scalars().first()
 
     if not business:
         result = await db.execute(
             select(Business).where(Business.name.ilike(f"%{business_code}%"))
         )
-        business = result.scalar_one_or_none()
+        business = result.scalars().first()
 
     if not business or not business.is_active:
         raise ValueError("Invalid business")

@@ -232,7 +232,7 @@ async def verify_by_capture(
             break
 
     existing = await db.execute(select(Verification).where(Verification.transaction_reference == ref, Verification.business_id == business_id))
-    if existing.scalar_one_or_none():
+    if existing.scalars().first():
         logger.warning(f"[capture] Duplicate verification for ref={ref} — allowing re-verification")
 
     logger.info(f"[capture] Calling verify_receipt — bank={bank}, ref={ref}, account_last8={acct_number[-8:] if acct_number else 'none'}")
@@ -488,7 +488,7 @@ async def get_verification(
             Verification.business_id == current_user.business_id,
         )
     )
-    verification = result.scalar_one_or_none()
+    verification = result.scalars().first()
     if not verification:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Verification not found")
     return verification

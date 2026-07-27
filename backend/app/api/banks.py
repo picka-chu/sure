@@ -62,7 +62,7 @@ async def get_bank_account(
             BankAccount.business_id == current_user.business_id,
         )
     )
-    account = result.scalar_one_or_none()
+    account = result.scalars().first()
     if not account:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bank account not found")
     return account
@@ -81,7 +81,7 @@ async def update_bank_account(
             BankAccount.business_id == current_user.business_id,
         )
     )
-    account = result.scalar_one_or_none()
+    account = result.scalars().first()
     if not account:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bank account not found")
 
@@ -107,7 +107,7 @@ async def delete_bank_account(
             BankAccount.business_id == current_user.business_id,
         )
     )
-    account = result.scalar_one_or_none()
+    account = result.scalars().first()
     if not account:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Bank account not found")
     account.is_active = False

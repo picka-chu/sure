@@ -20,7 +20,7 @@ async def get_api_client(
     key_hash = hashlib.sha256(x_api_key.encode()).hexdigest()
 
     result = await db.execute(select(ApiKey).where(ApiKey.key_hash == key_hash))
-    api_key = result.scalar_one_or_none()
+    api_key = result.scalars().first()
 
     if not api_key:
         raise HTTPException(status_code=401, detail="Invalid or revoked API key")
@@ -29,7 +29,7 @@ async def get_api_client(
         raise HTTPException(status_code=401, detail="API key is deactivated")
 
     result = await db.execute(select(Business).where(Business.id == api_key.business_id))
-    business = result.scalar_one_or_none()
+    business = result.scalars().first()
 
     if not business or not business.is_active:
         raise HTTPException(status_code=403, detail="Business account is inactive")

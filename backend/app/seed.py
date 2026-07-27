@@ -79,7 +79,7 @@ async def _seed_data(force: bool = False):
         existing = await db.execute(
             select(Business).where(Business.id == DEMO_BUSINESS_ID)
         )
-        if existing.scalar_one_or_none():
+        if existing.scalars().first():
             if not force:
                 print("Demo data already exists. Use --force to re-seed.")
                 return
@@ -228,7 +228,7 @@ async def _seed_data(force: bool = False):
 
         try:
             existing_admin = await db.execute(select(User).where(User.email == "admin@surepay.et"))
-            if not existing_admin.scalar_one_or_none():
+            if not existing_admin.scalars().first():
                 admin_user = User(
                     id=SUPER_ADMIN_ID,
                     business_id=DEMO_BUSINESS_ID,

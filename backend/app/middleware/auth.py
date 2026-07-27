@@ -30,7 +30,7 @@ async def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     result = await db.execute(select(User).where(User.id == UUID(user_id)))
-    user = result.scalar_one_or_none()
+    user = result.scalars().first()
     if user is None or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
     return user
@@ -53,7 +53,7 @@ async def get_current_staff(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     result = await db.execute(select(StaffUser).where(StaffUser.id == UUID(staff_id)))
-    staff = result.scalar_one_or_none()
+    staff = result.scalars().first()
     if staff is None or not staff.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Staff not found or inactive")
     return staff
@@ -77,13 +77,13 @@ async def get_current_any(
 
     if role == "owner":
         result = await db.execute(select(User).where(User.id == UUID(user_id)))
-        user = result.scalar_one_or_none()
+        user = result.scalars().first()
         if user is None or not user.is_active:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
         return user
     else:
         result = await db.execute(select(StaffUser).where(StaffUser.id == UUID(user_id)))
-        staff = result.scalar_one_or_none()
+        staff = result.scalars().first()
         if staff is None or not staff.is_active:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Staff not found or inactive")
         return staff
@@ -106,7 +106,7 @@ async def get_current_admin(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     result = await db.execute(select(User).where(User.id == UUID(user_id)))
-    user = result.scalar_one_or_none()
+    user = result.scalars().first()
     if user is None or not user.is_active or not user.is_super_admin:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Admin not found or inactive")
     return user

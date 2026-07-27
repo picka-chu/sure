@@ -48,7 +48,7 @@ async def create_staff(
         email = generate_staff_email(req.full_name, current_user.business_id)
 
     existing = await db.execute(select(StaffUser).where(StaffUser.email == email))
-    if existing.scalar_one_or_none():
+    if existing.scalars().first():
         email = f"{email.split('@')[0]}.{str(current_user.business_id).split('-')[1][:4]}@{email.split('@')[1]}"
 
     staff = StaffUser(
@@ -76,7 +76,7 @@ async def update_staff(
             StaffUser.business_id == current_user.business_id,
         )
     )
-    staff = result.scalar_one_or_none()
+    staff = result.scalars().first()
     if not staff:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Staff not found")
 
@@ -102,7 +102,7 @@ async def delete_staff(
             StaffUser.business_id == current_user.business_id,
         )
     )
-    staff = result.scalar_one_or_none()
+    staff = result.scalars().first()
     if not staff:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Staff not found")
     staff.is_active = False
