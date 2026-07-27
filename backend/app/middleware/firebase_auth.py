@@ -42,29 +42,39 @@ async def _find_or_create_user_from_firebase(
         or email.split("@")[0]
     )
     business_name = f"{full_name}'s Business"
+    now = datetime.now(timezone.utc)
 
-    business = Business(
-        name=business_name,
-        email=email,
-        phone=fb_user.get("phone_number"),
-        subscription_status=SubscriptionStatus.TRIAL,
-        trial_end_date=datetime.now(timezone.utc) + timedelta(days=7),
-    )
-    db.add(business)
-    await db.flush()
+    from sqlalchemy.exc import IntegrityError
+    try:
+        business = Business(
+            name=business_name,
+            email=email,
+            phone=fb_user.get("phone_number"),
+            subscription_status=SubscriptionStatus.TRIAL,
+            trial_end_date=now + timedelta(days=7),
+        )
+        db.add(business)
+        await db.flush()
 
-    user = User(
-        business_id=business.id,
-        email=email,
-        full_name=full_name,
-        role=role,
-    )
-    user.set_password(uuid.uuid4().hex)
-    db.add(user)
-    await db.flush()
+        user = User(
+            business_id=business.id,
+            email=email,
+            full_name=full_name,
+            role=role,
+        )
+        user.set_password(uuid.uuid4().hex)
+        db.add(user)
+        await db.flush()
 
-    logger.info(f"Created user+business from Firebase auth: email={email}, business={business.id}")
-    return user
+        logger.info(f"Created user+business from Firebase auth: email={email}, business={business.id}")
+        return user
+    except IntegrityError:
+        await db.rollback()
+        result = await db.execute(select(User).where(User.email == email))
+        user = result.scalars().first()
+        if user:
+            return user
+        raise
 
 
 async def get_current_user(
@@ -78,8 +88,10 @@ async def get_current_user(
     try:
         decoded = firebase_auth.verify_id_token(token)
         return await _find_or_create_user_from_firebase(db, decoded, role="owner")
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.warning(f"Firebase verify_id_token failed: {e}")
+        logger.warning(f"Firebase auth failed: {e}")
 
     from jose import JWTError, jwt
     try:
