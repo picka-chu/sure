@@ -1,4 +1,5 @@
 import json
+import uuid
 import firebase_admin
 import logging
 from fastapi import Depends, HTTPException, status
@@ -58,7 +59,7 @@ async def _find_or_create_user_from_firebase(
         full_name=full_name,
         role=role,
     )
-    user.set_password(UUID(fb_user["uid"]).hex)
+    user.set_password(uuid.uuid4().hex)
     db.add(user)
     await db.flush()
 
@@ -77,8 +78,8 @@ async def get_current_user(
     try:
         decoded = firebase_auth.verify_id_token(token)
         return await _find_or_create_user_from_firebase(db, decoded, role="owner")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Firebase verify_id_token failed: {e}")
 
     from jose import JWTError, jwt
     try:
@@ -133,8 +134,8 @@ async def get_current_any(
     try:
         decoded = firebase_auth.verify_id_token(token)
         return await _find_or_create_user_from_firebase(db, decoded, role="owner")
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Firebase verify_id_token failed (get_current_any): {e}")
 
     from jose import JWTError, jwt
     try:
@@ -153,7 +154,7 @@ async def get_current_any(
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found or inactive")
         return user
     else:
-        result = await db.execute(select(StaffUser).where(StaffUser.id == UUID(staff_id)))
+        result = await db.execute(select(StaffUser).where(StaffUser.id == UUID(user_id)))
         staff = result.scalar_one_or_none()
         if staff is None or not staff.is_active:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Staff not found or inactive")
@@ -175,8 +176,8 @@ async def get_current_admin(
             user.is_super_admin = True
             await db.flush()
         return user
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning(f"Firebase verify_id_token failed (get_current_admin): {e}")
 
     from jose import JWTError, jwt
     try:
