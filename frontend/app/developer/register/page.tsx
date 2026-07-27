@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
-import { Key, Mail, Lock, User, Building2, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { Key, Mail, Lock, User, Building2, Eye, EyeOff, ArrowLeft, ShieldCheck, Check } from "lucide-react";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { getApiBase } from "@/lib/api";
