@@ -6,7 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, ShieldCheck, Check, Key } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { auth, googleProvider, githubProvider } from "@/lib/firebase";
-import { signInWithPopup } from "firebase/auth";
+import { signInWithRedirect } from "firebase/auth";
 
 export default function DeveloperLoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
@@ -26,19 +26,10 @@ export default function DeveloperLoginPage() {
     router.push("/owner/developer");
   };
 
-  const signInWith = async (provider: typeof googleProvider | typeof githubProvider, setLoading: (v: boolean) => void) => {
-    setLoading(true);
+  const signInWith = async (provider: typeof googleProvider | typeof githubProvider) => {
     setError("");
-    try {
-      const cred = await signInWithPopup(auth, provider);
-      await afterAuth(cred.user);
-    } catch (err: any) {
-      if (err.code !== "auth/popup-closed-by-user") {
-        setError(err.message);
-      }
-    } finally {
-      setLoading(false);
-    }
+    sessionStorage.setItem("auth_redirect", "/owner/developer");
+    await signInWithRedirect(auth, provider);
   };
 
   return (
@@ -99,7 +90,7 @@ export default function DeveloperLoginPage() {
 
             <button
               type="button"
-              onClick={() => signInWith(googleProvider, setGoogleLoading)}
+              onClick={() => signInWith(googleProvider)}
               disabled={googleLoading}
               className="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50"
             >
@@ -118,7 +109,7 @@ export default function DeveloperLoginPage() {
 
             <button
               type="button"
-              onClick={() => signInWith(githubProvider, setGithubLoading)}
+              onClick={() => signInWith(githubProvider)}
               disabled={githubLoading}
               className="w-full flex items-center justify-center gap-2.5 px-4 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50"
             >

@@ -9,7 +9,7 @@ import AuthLayout from "@/components/layout/AuthLayout";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { auth, googleProvider } from "@/lib/firebase";
-import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
+import { signInWithEmailAndPassword, signInWithRedirect } from "firebase/auth";
 
 interface LoginForm {
   email: string;
@@ -54,26 +54,9 @@ export default function LoginPage() {
   };
 
   const signInWithGoogle = async () => {
-    setGoogleLoading(true);
     setError("");
-    try {
-      const cred = await signInWithPopup(auth, googleProvider);
-      const token = await cred.user.getIdToken();
-
-      localStorage.setItem("owner_token", token);
-      localStorage.setItem("owner_user", JSON.stringify({
-        id: cred.user.uid,
-        email: cred.user.email,
-        full_name: cred.user.displayName || cred.user.email?.split("@")[0],
-        business_name: "",
-      }));
-
-      router.push("/owner");
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setGoogleLoading(false);
-    }
+    sessionStorage.setItem("auth_redirect", "/owner");
+    await signInWithRedirect(auth, googleProvider);
   };
 
   return (

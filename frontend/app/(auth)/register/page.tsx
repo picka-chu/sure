@@ -18,7 +18,7 @@ import AuthLayout from "@/components/layout/AuthLayout";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { auth, googleProvider } from "@/lib/firebase";
-import { createUserWithEmailAndPassword, signInWithPopup, updateProfile } from "firebase/auth";
+import { createUserWithEmailAndPassword, signInWithRedirect, updateProfile } from "firebase/auth";
 
 interface RegisterForm {
   business_name: string;
@@ -71,16 +71,9 @@ export default function RegisterPage() {
   };
 
   const signUpWithGoogle = async () => {
-    setGoogleLoading(true);
     setError("");
-    try {
-      const cred = await signInWithPopup(auth, googleProvider);
-      await afterAuth(cred.user);
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setGoogleLoading(false);
-    }
+    sessionStorage.setItem("auth_redirect", "/owner");
+    await signInWithRedirect(auth, googleProvider);
   };
 
   return (
